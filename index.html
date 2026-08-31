@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#111827">
+
+    <title>Ponto do Almoço</title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            background: linear-gradient(135deg, #111827, #1f2937);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            color: #111827;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 480px;
+        }
+
+        .card {
+            background: #ffffff;
+            border-radius: 28px;
+            padding: 28px 22px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+        }
+
+        .logo {
+            text-align: center;
+            font-size: 42px;
+            margin-bottom: 8px;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 28px;
+            margin-bottom: 6px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #6b7280;
+            font-size: 14px;
+            margin-bottom: 28px;
+        }
+
+        .current-time {
+            background: #f3f4f6;
+            border-radius: 15px;
+            padding: 13px;
+            text-align: center;
+            margin-bottom: 22px;
+        }
+
+        .current-time span {
+            display: block;
+            color: #6b7280;
+            font-size: 12px;
+            margin-bottom: 4px;
+        }
+
+        .current-time strong {
+            font-size: 22px;
+        }
+
+        .section-title {
+            font-size: 15px;
+            font-weight: bold;
+            margin-bottom: 9px;
+        }
+
+        .time-input {
+            width: 100%;
+            padding: 17px;
+            border: 2px solid #e5e7eb;
+            border-radius: 15px;
+            font-size: 28px;
+            text-align: center;
+            font-weight: bold;
+            outline: none;
+            transition: 0.2s;
+        }
+
+        .time-input:focus {
+            border-color: #16a34a;
+        }
+
+        .quick-button {
+            width: 100%;
+            border: none;
+            background: #f3f4f6;
+            color: #374151;
+            border-radius: 13px;
+            padding: 12px;
+            margin-top: 10px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .calculate-button {
+            width: 100%;
+            border: none;
+            background: #16a34a;
+            color: white;
+            border-radius: 16px;
+            padding: 18px;
+            margin-top: 18px;
+            font-size: 17px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: 0.15s;
+        }
+
+        .calculate-button:active {
+            transform: scale(0.97);
+        }
+
+        .result {
+            margin-top: 24px;
+            background: #f0fdf4;
+            border-radius: 20px;
+            padding: 22px;
+            text-align: center;
+            display: none;
+        }
+
+        .result-title {
+            color: #166534;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+
+        .result-time {
+            color: #15803d;
+            font-size: 48px;
+            font-weight: 900;
+            margin: 4px 0;
+        }
+
+        .result-info {
+            color: #166534;
+            font-size: 14px;
+        }
+
+        .warning {
+            margin-top: 12px;
+            padding: 12px;
+            background: #fff7ed;
+            color: #9a3412;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        .history {
+            margin-top: 28px;
+        }
+
+        .history h2 {
+            font-size: 19px;
+            margin-bottom: 12px;
+        }
+
+        .history-item {
+            border-top: 1px solid #e5e7eb;
+            padding: 13px 0;
+            font-size: 14px;
+            line-height: 1.7;
+        }
+
+        .history-item strong {
+            color: #111827;
+        }
+
+        .empty {
+            color: #6b7280;
+            text-align: center;
+            padding: 15px;
+            font-size: 14px;
+        }
+
+        .clear-button {
+            width: 100%;
+            border: none;
+            background: #e5e7eb;
+            color: #111827;
+            border-radius: 14px;
+            padding: 15px;
+            margin-top: 12px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .footer {
+            text-align: center;
+            color: #9ca3af;
+            font-size: 11px;
+            margin-top: 20px;
+        }
+
+        @media (max-width: 380px) {
+
+            .result-time {
+                font-size: 42px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<div class="container">
+
+    <div class="card">
+
+        <div class="logo">
+            🍽️
+        </div>
+
+        <h1>
+            Ponto do Almoço
+        </h1>
+
+        <div class="subtitle">
+            Intervalo fixo de 1 hora e 12 minutos
+        </div>
+
+
+        <!-- RELÓGIO ATUAL -->
+
+        <div class="current-time">
+
+            <span>
+                🕐 Hora atual
+            </span>
+
+            <strong id="currentTime">
+                --:--
+            </strong>
+
+        </div>
+
+
+        <!-- HORÁRIO DE SAÍDA -->
+
+        <div class="section-title">
+            🏃 Horário que você saiu
+        </div>
+
+
+        <input
+            type="time"
+            id="exitTime"
+            class="time-input"
+        >
+
+
+        <button
+            class="quick-button"
+            onclick="usarHoraAtual()"
+        >
+            🕐 Usar hora atual
+        </button>
+
+
+        <!-- CALCULAR -->
+
+        <button
+            class="calculate-button"
+            onclick="calcularRetorno()"
+        >
+            CALCULAR HORÁRIO DE RETORNO
+        </button>
+
+
+        <!-- RESULTADO -->
+
+        <div
+            id="result"
+            class="result"
+        >
+
+            <div class="result-title">
+                🟢 VOCÊ PRECISA RETORNAR ÀS
+            </div>
+
+            <div
+                id="returnTime"
+                class="result-time"
+            >
+                --:--
+            </div>
+
+            <div
+                id="resultInfo"
+                class="result-info"
+            >
+                Saída: --:--
+            </div>
+
+            <div
+                id="warning"
+                class="warning"
+                style="display:none"
+            >
+                ⚠️ Atenção: o horário de retorno já passou.
+            </div>
+
+        </div>
+
+
+        <!-- HISTÓRICO -->
+
+        <div class="history">
+
+            <h2>
+                📋 Histórico
+            </h2>
+
+            <div id="historyList">
+
+                <div class="empty">
+                    Nenhum horário calculado ainda.
+                </div>
+
+            </div>
+
+
+            <button
+                class="clear-button"
+                onclick="limparHistorico()"
+            >
+                LIMPAR HISTÓRICO
+            </button>
+
+        </div>
+
+
+        <div class="footer">
+
+            O intervalo é sempre de 1 hora e 12 minutos.
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+<script>
+
+
+/*
+====================================================
+CONFIGURAÇÃO
+====================================================
+
+1 hora e 12 minutos = 72 minutos
+
+*/
+
+const INTERVALO_MINUTOS = 72;
+
+
+
+/*
+====================================================
+RELÓGIO ATUAL
+====================================================
+*/
+
+function atualizarRelogio() {
+
+    const agora = new Date();
+
+    const hora =
+        String(agora.getHours())
+        .padStart(2, "0");
+
+    const minutos =
+        String(agora.getMinutes())
+        .padStart(2, "0");
+
+    document.getElementById(
+        "currentTime"
+    ).textContent =
+        hora + ":" + minutos;
+
+}
+
+
+setInterval(
+    atualizarRelogio,
+    1000
+);
+
+atualizarRelogio();
+
+
+
+/*
+====================================================
+USAR HORA ATUAL
+====================================================
+*/
+
+function usarHoraAtual() {
+
+    const agora =
+        new Date();
+
+    const hora =
+        String(
+            agora.getHours()
+        ).padStart(2, "0");
+
+    const minutos =
+        String(
+            agora.getMinutes()
+        ).padStart(2, "0");
+
+
+    document.getElementById(
+        "exitTime"
+    ).value =
+        hora + ":" + minutos;
+
+}
+
+
+
+/*
+====================================================
+CALCULAR RETORNO
+====================================================
+*/
+
+function calcularRetorno() {
+
+
+    const campo =
+        document.getElementById(
+            "exitTime"
+        );
+
+
+    const valor =
+        campo.value;
+
+
+    if (!valor) {
+
+        alert(
+            "Digite o horário em que você saiu para o almoço."
+        );
+
+        return;
+
+    }
+
+
+    /*
+    Separa hora e minuto
+    */
+
+    const partes =
+        valor.split(":");
+
+
+    let hora =
+        parseInt(partes[0]);
+
+    let minutos =
+        parseInt(partes[1]);
+
+
+    /*
+    Soma os 72 minutos
+    */
+
+    minutos =
+        minutos + INTERVALO_MINUTOS;
+
+
+    /*
+    Ajusta caso passe de 60 minutos
+    */
+
+    while (minutos >= 60) {
+
+        minutos =
+            minutos - 60;
+
+        hora =
+            hora + 1;
+
+    }
+
+
+    /*
+    Caso passe da meia-noite
+    */
+
+    if (hora >= 24) {
+
+        hora =
+            hora - 24;
+
+    }
+
+
+    const horaRetorno =
+        String(hora)
+        .padStart(2, "0");
+
+
+    const minutoRetorno =
+        String(minutos)
+        .padStart(2, "0");
+
+
+    const retorno =
+        horaRetorno
+        + ":"
+        + minutoRetorno;
+
+
+    /*
+    Mostra resultado
+    */
+
+    document.getElementById(
+        "returnTime"
+    ).textContent =
+        retorno;
+
+
+    document.getElementById(
+        "resultInfo"
+    ).textContent =
+        "Saída: "
+        + valor
+        + "  •  Intervalo: 1h12";
+
+
+    document.getElementById(
+        "result"
+    ).style.display =
+        "block";
+
+
+    /*
+    Verifica se o retorno já passou
+    */
+
+    verificarHorario(
+        retorno
+    );
+
+
+    /*
+    Salva no histórico
+    */
+
+    salvarHistorico(
+        valor,
+        retorno
+    );
+
+}
+
+
+
+/*
+====================================================
+VERIFICAR SE JÁ PASSOU
+====================================================
+*/
+
+function verificarHorario(
+    retorno
+) {
+
+
+    const agora =
+        new Date();
+
+
+    const partes =
+        retorno.split(":");
+
+
+    const retornoMinutos =
+        parseInt(partes[0]) * 60
+        +
+        parseInt(partes[1]);
+
+
+    const agoraMinutos =
+        agora.getHours() * 60
+        +
+        agora.getMinutes();
+
+
+    const aviso =
+        document.getElementById(
+            "warning"
+        );
+
+
+    if (
+        retornoMinutos <
+        agoraMinutos
+    ) {
+
+        aviso.style.display =
+            "block";
+
+    }
+
+    else {
+
+        aviso.style.display =
+            "none";
+
+    }
+
+}
+
+
+
+/*
+====================================================
+HISTÓRICO
+====================================================
+*/
+
+function salvarHistorico(
+    saida,
+    retorno
+) {
+
+
+    let historico =
+        JSON.parse(
+            localStorage.getItem(
+                "historicoAlmoco"
+            ) || "[]"
+        );
+
+
+    const agora =
+        new Date();
+
+
+    historico.unshift({
+
+        data:
+            agora.toLocaleDateString(
+                "pt-BR"
+            ),
+
+        saida:
+            saida,
+
+        retorno:
+            retorno
+
+    });
+
+
+    /*
+    Guarda no máximo 50 registros
+    */
+
+    historico =
+        historico.slice(
+            0,
+            50
+        );
+
+
+    localStorage.setItem(
+        "historicoAlmoco",
+        JSON.stringify(
+            historico
+        )
+    );
+
+
+    mostrarHistorico();
+
+}
+
+
+
+/*
+====================================================
+MOSTRAR HISTÓRICO
+====================================================
+*/
+
+function mostrarHistorico() {
+
+
+    const historico =
+        JSON.parse(
+            localStorage.getItem(
+                "historicoAlmoco"
+            ) || "[]"
+        );
+
+
+    const lista =
+        document.getElementById(
+            "historyList"
+        );
+
+
+    if (
+        historico.length === 0
+    ) {
+
+        lista.innerHTML =
+            '<div class="empty">' +
+            'Nenhum horário calculado ainda.' +
+            '</div>';
+
+        return;
+
+    }
+
+
+    lista.innerHTML = "";
+
+
+    historico.forEach(
+        registro => {
+
+            const item =
+                document.createElement(
+                    "div"
+                );
+
+
+            item.className =
+                "history-item";
+
+
+            item.innerHTML =
+
+                "<strong>" +
+                registro.data +
+                "</strong><br>" +
+
+                "Saída: " +
+                registro.saida +
+
+                " → Retorno: " +
+
+                "<strong>" +
+                registro.retorno +
+                "</strong>";
+
+
+            lista.appendChild(
+                item
+            );
+
+        }
+    );
+
+}
+
+
+
+/*
+====================================================
+LIMPAR HISTÓRICO
+====================================================
+*/
+
+function limparHistorico() {
+
+
+    if (
+        !confirm(
+            "Deseja apagar todo o histórico?"
+        )
+    ) {
+
+        return;
+
+    }
+
+
+    localStorage.removeItem(
+        "historicoAlmoco"
+    );
+
+
+    mostrarHistorico();
+
+}
+
+
+
+/*
+====================================================
+INICIALIZAÇÃO
+====================================================
+*/
+
+mostrarHistorico();
+
+
+</script>
+
+
+</body>
+
+</html>
