@@ -167,6 +167,30 @@
             font-weight: bold;
         }
 
+        .alarm-button {
+            width: 100%;
+            border: none;
+            background: #111827;
+            color: white;
+            border-radius: 14px;
+            padding: 15px;
+            margin-top: 14px;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .alarm-button:active {
+            transform: scale(0.97);
+        }
+
+        .alarm-note {
+            margin-top: 10px;
+            font-size: 12px;
+            color: #6b7280;
+            display: none;
+        }
+
         .history {
             margin-top: 28px;
         }
@@ -331,6 +355,22 @@
                 ⚠️ Atenção: o horário de retorno já passou.
             </div>
 
+            <button
+                class="alarm-button"
+                onclick="adicionarAlarme()"
+            >
+                ⏰ Definir alarme de retorno
+            </button>
+
+            <div
+                id="alarmNote"
+                class="alarm-note"
+            >
+                Esse recurso abre o app de relógio do seu celular
+                (funciona em Android). No Galaxy, o alarme sincroniza
+                automaticamente com o relógio pelo Galaxy Wearable.
+            </div>
+
         </div>
 
 
@@ -386,6 +426,15 @@ CONFIGURAÇÃO
 */
 
 const INTERVALO_MINUTOS = 72;
+
+
+/*
+Guarda o horário de retorno calculado por último,
+para usar no botão de alarme.
+*/
+
+let ultimoRetornoHora = null;
+let ultimoRetornoMinuto = null;
 
 
 
@@ -552,6 +601,14 @@ function calcularRetorno() {
 
 
     /*
+    Guarda para o botão de alarme
+    */
+
+    ultimoRetornoHora = hora;
+    ultimoRetornoMinuto = minutos;
+
+
+    /*
     Mostra resultado
     */
 
@@ -576,6 +633,16 @@ function calcularRetorno() {
 
 
     /*
+    Esconde aviso do alarme até o usuário tentar usar
+    */
+
+    document.getElementById(
+        "alarmNote"
+    ).style.display =
+        "none";
+
+
+    /*
     Verifica se o retorno já passou
     */
 
@@ -592,6 +659,105 @@ function calcularRetorno() {
         valor,
         retorno
     );
+
+}
+
+
+
+/*
+====================================================
+DEFINIR ALARME NO RELÓGIO DO CELULAR
+====================================================
+
+Usa o intent SET_ALARM do Android para abrir o app
+de relógio já com o horário preenchido. Em aparelhos
+Samsung, o alarme criado no app Relógio sincroniza
+automaticamente com o Galaxy Watch via Galaxy Wearable.
+
+Esse recurso só funciona em Android (Chrome ou navegador
+padrão). Em iPhone e computador, não existe uma forma
+de um site abrir o app de relógio diretamente — por isso
+mostramos um aviso pedindo para criar o alarme manualmente.
+
+*/
+
+function adicionarAlarme() {
+
+
+    if (
+        ultimoRetornoHora === null ||
+        ultimoRetornoMinuto === null
+    ) {
+
+        alert(
+            "Calcule o horário de retorno primeiro."
+        );
+
+        return;
+
+    }
+
+
+    const ehAndroid =
+        /Android/i.test(
+            navigator.userAgent
+        );
+
+
+    const aviso =
+        document.getElementById(
+            "alarmNote"
+        );
+
+
+    if (!ehAndroid) {
+
+        aviso.style.display =
+            "block";
+
+        aviso.textContent =
+            "Esse recurso funciona apenas em Android. " +
+            "Crie o alarme manualmente no seu relógio para " +
+            String(ultimoRetornoHora).padStart(2, "0") +
+            ":" +
+            String(ultimoRetornoMinuto).padStart(2, "0") +
+            ".";
+
+        return;
+
+    }
+
+
+    const mensagem =
+        encodeURIComponent(
+            "Retornar do almoço"
+        );
+
+
+    const intentUrl =
+
+        "intent:#Intent;" +
+        "action=android.intent.action.SET_ALARM;" +
+        "i.android.intent.extra.alarm.HOUR=" +
+        ultimoRetornoHora + ";" +
+        "i.android.intent.extra.alarm.MINUTES=" +
+        ultimoRetornoMinuto + ";" +
+        "S.android.intent.extra.alarm.MESSAGE=" +
+        mensagem + ";" +
+        "B.android.intent.extra.alarm.SKIP_UI=false;" +
+        "end";
+
+
+    aviso.style.display =
+        "block";
+
+    aviso.textContent =
+        "Abrindo o app de relógio... confirme para salvar o alarme. " +
+        "Ele sincroniza com o Galaxy Watch automaticamente.";
+
+
+    window.location.href =
+        intentUrl;
 
 }
 
