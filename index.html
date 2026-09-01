@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="pt-BR">
 
@@ -359,16 +360,17 @@
                 class="alarm-button"
                 onclick="adicionarAlarme()"
             >
-                ⏰ Definir alarme de retorno
+                📱 Adicionar alarme no celular
             </button>
 
             <div
                 id="alarmNote"
                 class="alarm-note"
             >
-                Esse recurso abre o app de relógio do seu celular
-                (funciona em Android). No Galaxy, o alarme sincroniza
-                automaticamente com o relógio pelo Galaxy Wearable.
+                Abre o app de Relógio do seu celular com o horário
+                já preenchido — é só confirmar. No Galaxy, esse
+                alarme sincroniza automaticamente com o smartwatch
+                pelo Galaxy Wearable.
             </div>
 
         </div>
@@ -736,7 +738,7 @@ function adicionarAlarme() {
 
     const intentUrl =
 
-        "intent:#Intent;" +
+        "intent://#Intent;" +
         "action=android.intent.action.SET_ALARM;" +
         "i.android.intent.extra.alarm.HOUR=" +
         ultimoRetornoHora + ";" +
@@ -756,8 +758,27 @@ function adicionarAlarme() {
         "Ele sincroniza com o Galaxy Watch automaticamente.";
 
 
-    window.location.href =
+    /*
+    Dispara por meio de um link real (clique programado),
+    mais confiável no Chrome Android do que trocar
+    window.location.href diretamente.
+    */
+
+    const link =
+        document.createElement("a");
+
+    link.href =
         intentUrl;
+
+    document.body.appendChild(
+        link
+    );
+
+    link.click();
+
+    document.body.removeChild(
+        link
+    );
 
 }
 
@@ -1012,3 +1033,4 @@ mostrarHistorico();
 </body>
 
 </html>
+```
