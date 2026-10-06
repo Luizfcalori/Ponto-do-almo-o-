@@ -138,17 +138,40 @@ public class MainActivity extends Activity {
             " }catch(e){}" +
             " return texts;" +
             "}" +
-            "function findTodayBlock(d,today,todayShort){" +
-            " var best=null,bestLen=999999;" +
+            "function findTodayBlock(d,h,today,todayShort){" +
+            " var best=null,bestCount=0,bestLen=999999;" +
             " try{" +
-            "  var els=[].slice.call(d.querySelectorAll('tr,[role=row],tbody,li,section,article,div'));" +
-            "  for(var i=0;i<els.length;i++){" +
-            "   var txt=(els[i].innerText||'').trim();" +
-            "   if(!txt||txt.length>6000)continue;" +
-            "   if(txt.indexOf(today)<0&&txt.indexOf(todayShort)<0)continue;" +
-            "   var tm=timeMatches(txt);" +
-            "   if(!tm.length)continue;" +
-            "   if(txt.length<bestLen){best=txt;bestLen=txt.length;}" +
+            "  var nodes=[].slice.call(d.querySelectorAll('td,th,span,div,p,strong'));" +
+            "  var dateNodes=[];" +
+            "  for(var i=0;i<nodes.length;i++){" +
+            "   var own=(nodes[i].innerText||'').trim();" +
+            "   if(own===today||own===todayShort||own.indexOf(today)===0||own.indexOf(todayShort)===0)dateNodes.push(nodes[i]);" +
+            "  }" +
+            "  for(var n=0;n<dateNodes.length;n++){" +
+            "   var p=dateNodes[n];" +
+            "   for(var up=0;up<9&&p;up++,p=p.parentElement){" +
+            "    var txt=(p.innerText||'').trim(),nt=norm(txt).toUpperCase();" +
+            "    if(!txt||txt.length>9000)continue;" +
+            "    if(nt.indexOf('ULTIMA ATUALIZACAO')>=0||nt.indexOf('ESCALA DE TRABALHO')>=0)continue;" +
+            "    var tm=timeMatches(txt);" +
+            "    if(!tm.length||tm.length>8)continue;" +
+            "    var dateHits=(txt.match(/\\b\\d{2}\\/\\d{2}(?:\\/\\d{4})?\\b/g)||[]);" +
+            "    var otherDate=false;" +
+            "    for(var dh=0;dh<dateHits.length;dh++){if(dateHits[dh].indexOf(todayShort)!==0){otherDate=true;break;}}" +
+            "    if(otherDate)continue;" +
+            "    if(tm.length>bestCount||(tm.length===bestCount&&txt.length<bestLen)){best=txt;bestCount=tm.length;bestLen=txt.length;}" +
+            "   }" +
+            "  }" +
+            "  if(bestCount>=2)return best;" +
+            "  var rows=[].slice.call(d.querySelectorAll('tr,[role=row],li,section,article,div'));" +
+            "  for(var r=0;r<rows.length;r++){" +
+            "   var rt=(rows[r].innerText||'').trim(),rn=norm(rt).toUpperCase();" +
+            "   if(!rt||rt.length>5000)continue;" +
+            "   if(rt.indexOf(today)<0&&rt.indexOf(todayShort)<0)continue;" +
+            "   if(rn.indexOf('ULTIMA ATUALIZACAO')>=0||rn.indexOf('ESCALA DE TRABALHO')>=0)continue;" +
+            "   var rtm=timeMatches(rt);" +
+            "   if(!rtm.length||rtm.length>8)continue;" +
+            "   if(rtm.length>bestCount||(rtm.length===bestCount&&rt.length<bestLen)){best=rt;bestCount=rtm.length;bestLen=rt.length;}" +
             "  }" +
             " }catch(e){}" +
             " return best;" +
@@ -189,12 +212,12 @@ public class MainActivity extends Activity {
             "  return null;" +
             " }" +
             " var firstName=extractFirstName(bodyText);" +
-            " var todayBlock=findTodayBlock(d,today,todayShort),times=[],evidence=[];" +
+            " var todayBlock=findTodayBlock(d,h,today,todayShort),times=[],evidence=[];" +
             " if(todayBlock){" +
             "  var todays=timeMatches(todayBlock);" +
             "  for(var tb=0;tb<todays.length;tb++){if(times.indexOf(todays[tb])<0){times.push(todays[tb]);evidence.push(todayBlock.slice(0,260));}}" +
             " }" +
-            " if(times.length>0){" +
+            " if(times.length>=2){" +
             "  if(times.length>4)times=[times[0],times[1],times[2],times[times.length-1]];" +
             "  return JSON.stringify({ok:true,loggedIn:true,day:today,times:times,message:'Marcações de hoje lidas nos comprovantes.',frame:di,evidence:evidence.slice(0,times.length),firstName:firstName,scheduleStart:scheduleStart,scheduleEnd:scheduleEnd,scheduleBreak:scheduleBreak});" +
             " }" +
@@ -203,7 +226,7 @@ public class MainActivity extends Activity {
             "  var t=texts[k],nt=norm(t).toUpperCase();" +
             "  var hasDate=t.indexOf(today)>=0 || t.indexOf(todayShort)>=0;" +
             "  var looksReceipt=/COMPROVANTE|MARCACAO|DATA|HORA|NSR|LOCAL|ORIGEM|REGISTRO/.test(nt);" +
-            "  if(!hasDate && !looksReceipt && t.length>120)continue;" +
+            "  if(!hasDate)continue;" +
             "  var tm=timeMatches(t);" +
             "  for(var j=0;j<tm.length;j++){" +
             "   var v=tm[j];" +
