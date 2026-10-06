@@ -1249,7 +1249,7 @@
     const entry = times[0] || null;
     const lunchOut = times[1] || null;
     const lunchReturn = times[2] || null;
-    const exit = times.length >= 4 ? times[times.length - 1] : null;
+    const exit = times[3] || null;
     const schedule = getExpectedSchedule();
     const expectedWorkStart = schedule.start;
     const expectedWorkEnd = calculateExpectedWorkEnd();
@@ -1267,7 +1267,7 @@
 
     document.getElementById('sumExit').textContent = exit || '--:--';
 
-    if(lunchOut) registerSeniorLunch(lunchOut);
+    if(lunchOut && !lunchReturn) registerSeniorLunch(lunchOut);
 
     // O relógio central não exibe mais a hora atual.
     document.getElementById('currentTime').textContent = '--:--';
