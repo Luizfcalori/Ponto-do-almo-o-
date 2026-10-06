@@ -4,13 +4,19 @@ import android.annotation.SuppressLint;
 import android.Manifest;
 import android.app.Activity;
 import android.app.AlarmManager;
+import android.app.DownloadManager;
 import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.Settings;
@@ -51,6 +57,9 @@ public class MainActivity extends Activity {
     private LinearLayout seniorContainer;
     private WebView seniorWebView;
     private boolean seniorVisible = false;
+    private long updateDownloadId = -1L;
+    private String pendingUpdateUrl = null;
+    private BroadcastReceiver updateDownloadReceiver;
 
     private final String EXPAND_RECEIPTS_JS =
             "(function(){" +
@@ -263,6 +272,8 @@ public class MainActivity extends Activity {
         } else {
             handler.postDelayed(this::ensureExactAlarmPermission, 700);
         }
+
+        registerUpdateDownloadReceiver();
 
         root = new FrameLayout(this);
         dashboardWebView = new WebView(this);
@@ -576,6 +587,135 @@ public class MainActivity extends Activity {
         });
     }
 
+    private void registerUpdateDownloadReceiver() {
+        updateDownloadReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                if (!DownloadManager.ACTION_DOWNLOAD_COMPLETE.equals(intent.getAction())) return;
+                long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1L);
+                if (id != updateDownloadId) return;
+                openDownloadedUpdate(id);
+            }
+        };
+
+        IntentFilter filter = new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE);
+        if (Build.VERSION.SDK_INT >= 33) {
+            registerReceiver(updateDownloadReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
+        } else {
+            registerReceiver(updateDownloadReceiver, filter);
+        }
+    }
+
+    private String getVersionInfoJson() {
+        try {
+            PackageInfo info = getPackageManager().getPackageInfo(getPackageName(), 0);
+            long versionCode = Build.VERSION.SDK_INT >= 28
+                    ? info.getLongVersionCode()
+                    : info.versionCode;
+
+            JSONObject obj = new JSONObject();
+            obj.put("versionName", info.versionName == null ? "" : info.versionName);
+            obj.put("versionCode", versionCode);
+            obj.put("packageName", getPackageName());
+            return obj.toString();
+        } catch (Exception e) {
+            return "{\"versionName\":\"\",\"versionCode\":0}";
+        }
+    }
+
+    private void sendUpdaterStatus(String state, String message) {
+        try {
+            JSONObject obj = new JSONObject();
+            obj.put("state", state);
+            obj.put("message", message);
+            String quoted = JSONObject.quote(obj.toString());
+            dashboardWebView.evaluateJavascript(
+                    "window.receiveAppUpdaterStatus && window.receiveAppUpdaterStatus(" + quoted + ");",
+                    null
+            );
+        } catch (Exception ignored) {}
+    }
+
+    private void startAppUpdate(String url) {
+        if (url == null || url.isBlank() || !url.startsWith("https://")) {
+            sendUpdaterStatus("error", "Endereço de atualização inválido.");
+            return;
+        }
+
+        if (Build.VERSION.SDK_INT >= 26 && !getPackageManager().canRequestPackageInstalls()) {
+            pendingUpdateUrl = url;
+            sendUpdaterStatus(
+                    "permission_required",
+                    "Autorize o Hora do Almoço a instalar atualizações e volte para o app."
+            );
+            try {
+                Intent intent = new Intent(
+                        Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                        Uri.parse("package:" + getPackageName())
+                );
+                startActivity(intent);
+            } catch (Exception e) {
+                sendUpdaterStatus("error", "Não consegui abrir a autorização de instalação.");
+            }
+            return;
+        }
+
+        beginUpdateDownload(url);
+    }
+
+    private void beginUpdateDownload(String url) {
+        try {
+            DownloadManager manager = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
+            if (manager == null) {
+                sendUpdaterStatus("error", "Serviço de download indisponível.");
+                return;
+            }
+
+            String fileName = "Hora-do-Almoco-update-" + System.currentTimeMillis() + ".apk";
+            DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url));
+            request.setTitle("Atualização do Hora do Almoço");
+            request.setDescription("Baixando a nova versão do aplicativo.");
+            request.setMimeType("application/vnd.android.package-archive");
+            request.setAllowedOverMetered(true);
+            request.setAllowedOverRoaming(false);
+            request.setNotificationVisibility(
+                    DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED
+            );
+            request.setDestinationInExternalFilesDir(
+                    this,
+                    Environment.DIRECTORY_DOWNLOADS,
+                    fileName
+            );
+
+            updateDownloadId = manager.enqueue(request);
+            sendUpdaterStatus("downloading", "Baixando a atualização...");
+        } catch (Exception e) {
+            sendUpdaterStatus("error", "Não foi possível iniciar o download da atualização.");
+        }
+    }
+
+    private void openDownloadedUpdate(long downloadId) {
+        try {
+            DownloadManager manager = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
+            if (manager == null) return;
+
+            Uri apkUri = manager.getUriForDownloadedFile(downloadId);
+            if (apkUri == null) {
+                sendUpdaterStatus("error", "O download da atualização não foi concluído.");
+                return;
+            }
+
+            Intent install = new Intent(Intent.ACTION_VIEW);
+            install.setDataAndType(apkUri, "application/vnd.android.package-archive");
+            install.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            install.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            sendUpdaterStatus("installer", "Download concluído. Confirme a atualização no Android.");
+            startActivity(install);
+        } catch (Exception e) {
+            sendUpdaterStatus("error", "Não consegui abrir o instalador da atualização.");
+        }
+    }
+
     private void ensureExactAlarmPermission() {
         if (Build.VERSION.SDK_INT < 31) return;
 
@@ -745,8 +885,29 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
+        public String getVersionInfo() {
+            return getVersionInfoJson();
+        }
+
+        @JavascriptInterface
+        public void installUpdate(String url) {
+            runOnUiThread(() -> startAppUpdate(url));
+        }
+
+        @JavascriptInterface
         public void clearSession() {
             runOnUiThread(MainActivity.this::clearSeniorSession);
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (pendingUpdateUrl != null &&
+                (Build.VERSION.SDK_INT < 26 || getPackageManager().canRequestPackageInstalls())) {
+            String url = pendingUpdateUrl;
+            pendingUpdateUrl = null;
+            handler.postDelayed(() -> beginUpdateDownload(url), 350);
         }
     }
 
@@ -777,6 +938,9 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        try {
+            if (updateDownloadReceiver != null) unregisterReceiver(updateDownloadReceiver);
+        } catch (Exception ignored) {}
         if (dashboardWebView != null) dashboardWebView.destroy();
         if (seniorWebView != null) seniorWebView.destroy();
         super.onDestroy();
