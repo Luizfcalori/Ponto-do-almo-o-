@@ -78,9 +78,24 @@
     }
 
     .greeting{display:flex;justify-content:space-between;gap:14px;margin-top:28px;align-items:flex-start}
+    .greeting-left{min-width:0;flex:1}
+    .greet-line{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
     .greet-main{font-size:25px;font-weight:900;letter-spacing:-.5px}
     .greet-sub{color:#c7d3df;margin-top:4px;font-size:14px}
-    .date-small{text-align:right;color:#d6e0e9;font-size:12px;line-height:1.45}
+    .weather-inline{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;color:#dbe7f1}
+    .weather-icon{font-size:22px;line-height:1}
+    .weather-temp{font-size:13px;font-weight:900;color:#fff}
+    .weather-desc{font-size:10.5px;color:#c7d3df}
+    .date-small{text-align:right;color:#d6e0e9;font-size:12px;line-height:1.45;min-width:118px}
+    .live-clock{margin-top:5px;display:flex;align-items:center;justify-content:flex-end;gap:5px;color:#fff;font-size:16px;font-weight:850;letter-spacing:.2px}
+    .live-clock-icon{font-size:13px;color:#bcd0df}
+    @media (max-width:390px){
+      .greeting{gap:9px}
+      .greet-main{font-size:23px}
+      .weather-desc{display:none}
+      .date-small{min-width:108px;font-size:11px}
+      .live-clock{font-size:15px}
+    }
 
     .sync-card{
       margin-top:24px;background:#fff;color:var(--text);border-radius:19px;padding:15px 16px;
@@ -390,11 +405,21 @@
       </div>
 
       <div class="greeting">
-        <div>
-          <div class="greet-main" id="greetMain">Olá! ☀️</div>
-          <div class="greet-sub">Bom trabalho hoje!</div>
+        <div class="greeting-left">
+          <div class="greet-line">
+            <div class="greet-main" id="greetMain">Olá!</div>
+            <div class="weather-inline" id="weatherInline" aria-label="Clima atual">
+              <span class="weather-icon" id="weatherIcon">☀️</span>
+              <span class="weather-temp" id="weatherTemp"></span>
+              <span class="weather-desc" id="weatherDesc"></span>
+            </div>
+          </div>
+          <div class="greet-sub" id="greetSub">Bom trabalho hoje!</div>
         </div>
-        <div class="date-small" id="todayText">--</div>
+        <div class="date-small">
+          <div id="todayText">--</div>
+          <div class="live-clock"><span class="live-clock-icon">◷</span><span id="liveClock">--:--</span></div>
+        </div>
       </div>
 
       <div class="sync-card" onclick="handleSeniorCard()">
@@ -855,6 +880,121 @@
     document.getElementById('clockFooter').textContent = 'Jornada de hoje concluída';
   }
 
+  let weatherFetchInFlight = false;
+
+  function setGreetingMessage(message){
+    const el = document.getElementById('greetSub');
+    if(el) el.textContent = message || 'Bom trabalho hoje!';
+  }
+
+  function updateGreetingForState(entry,lunchOut,lunchReturn,exit){
+    if(exit){
+      setGreetingMessage('Bom descanso!');
+    } else if(lunchOut && !lunchReturn){
+      setGreetingMessage('Bom almoço!');
+    } else if(lunchReturn){
+      setGreetingMessage('Boa tarde!');
+    } else {
+      setGreetingMessage('Bom trabalho hoje!');
+    }
+  }
+
+  function weatherInfoFromCode(code,isDay){
+    const day = Number(isDay) !== 0;
+    const c = Number(code);
+    if(c === 0) return {icon:day ? '☀️' : '🌙',desc:'Céu limpo'};
+    if(c === 1 || c === 2) return {icon:day ? '🌤️' : '☁️',desc:'Parcialmente nublado'};
+    if(c === 3) return {icon:'☁️',desc:'Nublado'};
+    if(c === 45 || c === 48) return {icon:'🌫️',desc:'Neblina'};
+    if(c >= 51 && c <= 57) return {icon:'🌦️',desc:'Garoa'};
+    if(c >= 61 && c <= 67) return {icon:'🌧️',desc:'Chuva'};
+    if(c >= 71 && c <= 77) return {icon:'🌨️',desc:'Neve'};
+    if(c >= 80 && c <= 82) return {icon:'🌦️',desc:'Pancadas de chuva'};
+    if(c === 85 || c === 86) return {icon:'🌨️',desc:'Neve'};
+    if(c >= 95) return {icon:'⛈️',desc:'Tempestade'};
+    return {icon:day ? '🌤️' : '🌙',desc:'Tempo variável'};
+  }
+
+  function applyWeather(data){
+    if(!data) return;
+    const info = weatherInfoFromCode(data.code,data.isDay);
+    const icon = document.getElementById('weatherIcon');
+    const temp = document.getElementById('weatherTemp');
+    const desc = document.getElementById('weatherDesc');
+    if(icon) icon.textContent = info.icon;
+    if(temp) temp.textContent = Number.isFinite(Number(data.temp)) ? Math.round(Number(data.temp)) + '°C' : '';
+    if(desc) desc.textContent = data.desc || info.desc;
+  }
+
+  function setTimeBasedWeatherFallback(){
+    const hour = new Date().getHours();
+    const isDay = hour >= 6 && hour < 18;
+    const icon = document.getElementById('weatherIcon');
+    const temp = document.getElementById('weatherTemp');
+    const desc = document.getElementById('weatherDesc');
+    if(icon) icon.textContent = isDay ? '☀️' : '🌙';
+    if(temp) temp.textContent = '';
+    if(desc) desc.textContent = '';
+  }
+
+  function restoreWeatherCache(){
+    try{
+      const cached = JSON.parse(localStorage.getItem('homeWeatherCache') || 'null');
+      if(cached && cached.savedAt && Date.now() - cached.savedAt < 90*60*1000){
+        applyWeather(cached);
+        return true;
+      }
+    }catch(_){}
+    setTimeBasedWeatherFallback();
+    return false;
+  }
+
+  async function loadWeatherForCoords(latitude,longitude){
+    const url =
+      'https://api.open-meteo.com/v1/forecast?latitude=' + encodeURIComponent(latitude) +
+      '&longitude=' + encodeURIComponent(longitude) +
+      '&current=temperature_2m,weather_code,is_day&timezone=auto';
+    const response = await fetch(url,{cache:'no-store'});
+    if(!response.ok) throw new Error('weather');
+    const json = await response.json();
+    const current = json && currentOrNull(json.current);
+    if(!current) throw new Error('weather');
+    const data = {
+      temp:Number(current.temperature_2m),
+      code:Number(current.weather_code),
+      isDay:Number(current.is_day),
+      savedAt:Date.now()
+    };
+    applyWeather(data);
+    try{ localStorage.setItem('homeWeatherCache',JSON.stringify(data)); }catch(_){}
+  }
+
+  function currentOrNull(value){
+    return value && typeof value === 'object' ? value : null;
+  }
+
+  function refreshWeather(){
+    if(weatherFetchInFlight) return;
+    if(!navigator.geolocation){
+      setTimeBasedWeatherFallback();
+      return;
+    }
+
+    weatherFetchInFlight = true;
+    navigator.geolocation.getCurrentPosition(
+      function(position){
+        loadWeatherForCoords(position.coords.latitude,position.coords.longitude)
+          .catch(function(){ if(!restoreWeatherCache()) setTimeBasedWeatherFallback(); })
+          .finally(function(){ weatherFetchInFlight = false; });
+      },
+      function(){
+        weatherFetchInFlight = false;
+        restoreWeatherCache();
+      },
+      {enableHighAccuracy:false,timeout:8000,maximumAge:30*60*1000}
+    );
+  }
+
   function atualizarRelogio(){
     const agora = new Date();
     const ring = document.getElementById('homeClockRing');
@@ -864,6 +1004,10 @@
     document.getElementById('todayText').innerHTML =
       agora.toLocaleDateString('pt-BR',{weekday:'long'}) + '<br>' +
       agora.toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
+    const liveClock = document.getElementById('liveClock');
+    if(liveClock){
+      liveClock.textContent = agora.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',hour12:false});
+    }
     atualizarProgresso();
   }
 
@@ -1282,7 +1426,7 @@
     const savedFirstName = localStorage.getItem('seniorFirstName');
     if(savedFirstName){
       const greet = document.getElementById('greetMain');
-      if(greet) greet.textContent = 'Olá, ' + savedFirstName + '! ☀️';
+      if(greet) greet.textContent = 'Olá, ' + savedFirstName + '!';
     }
     document.getElementById('currentTime').textContent = '--:--';
 
@@ -1315,6 +1459,7 @@
       document.getElementById('sumLunchOut').textContent = ativo.saida;
       document.getElementById('sumReturn').textContent = ativo.retorno;
       renderLunchClock(ativo.saida,ativo.retorno);
+      setGreetingMessage('Bom almoço!');
 
       const rp = ativo.retorno.split(':').map(Number);
       ultimoRetornoHora = rp[0];
@@ -1544,7 +1689,7 @@
       localStorage.removeItem('seniorScheduleEnd');
       localStorage.removeItem('seniorScheduleBreak');
       const greet = document.getElementById('greetMain');
-      if(greet) greet.textContent = 'Olá! ☀️';
+      if(greet) greet.textContent = 'Olá!';
       seniorConnected = false;
       setSeniorVisual('disconnected','Sessão da Senior removida deste app.');
       closeSeniorModal();
@@ -1649,12 +1794,12 @@
         const formatted = clean.charAt(0).toUpperCase() + clean.slice(1).toLowerCase();
         localStorage.setItem('seniorFirstName', formatted);
         const greet = document.getElementById('greetMain');
-        if(greet) greet.textContent = 'Olá, ' + formatted + '! ☀️';
+        if(greet) greet.textContent = 'Olá, ' + formatted + '!';
       }
     } else {
       const saved = localStorage.getItem('seniorFirstName');
       const greet = document.getElementById('greetMain');
-      if(greet) greet.textContent = saved ? ('Olá, ' + saved + '! ☀️') : 'Olá! ☀️';
+      if(greet) greet.textContent = saved ? ('Olá, ' + saved + '!') : 'Olá!';
     }
 
     if(data && data.scheduleStart) localStorage.setItem('seniorScheduleStart', data.scheduleStart);
@@ -1733,6 +1878,8 @@
     const schedule = getExpectedSchedule();
     const expectedWorkStart = schedule.start;
     const expectedWorkEnd = calculateExpectedWorkEnd();
+
+    updateGreetingForState(entry,lunchOut,lunchReturn,exit);
 
     document.getElementById('sumEntry').textContent = entry || '--:--';
     document.getElementById('sumLunchOut').textContent = lunchOut || '--:--';
@@ -1942,7 +2089,10 @@
   }
 
   setInterval(atualizarRelogio,1000);
+  setInterval(refreshWeather,15*60*1000);
   atualizarRelogio();
+  restoreWeatherCache();
+  refreshWeather();
   restaurarEstado();
   initSenior();
 </script>
