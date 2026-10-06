@@ -90,32 +90,69 @@ public class MainActivity extends Activity {
             " }" +
             " return out;" +
             "}" +
-            "var ds=docs(),best=null;" +
-            "for(var di=0;di<ds.length;di++){" +
-            " var d=ds[di],body=d&&d.body;if(!body)continue;" +
-            " var full=body.innerText||'',normalized=norm(full).toUpperCase();" +
-            " var idx=normalized.indexOf('COMPROVANTES DE MARCACOES');" +
-            " if(idx<0)idx=normalized.indexOf('COMPROVANTE DE MARCACOES');" +
-            " if(idx<0)continue;" +
-            " var section=full.slice(idx);" +
-            " var today=new Intl.DateTimeFormat('pt-BR',{timeZone:'America/Sao_Paulo',day:'2-digit',month:'2-digit',year:'numeric'}).format(new Date());" +
-            " var dated=[];" +
+            "function findHeading(d){" +
             " try{" +
-            "  var nodes=[].slice.call(d.querySelectorAll('body *'));" +
-            "  for(var i=0;i<nodes.length;i++){" +
-            "   var t=(nodes[i].innerText||'').trim();if(!t||t.length>900)continue;" +
-            "   if(t.indexOf(today)>=0){" +
-            "    var tm=timeMatches(t);for(var j=0;j<tm.length;j++)if(dated.indexOf(tm[j])<0)dated.push(tm[j]);" +
-            "   }" +
+            "  var all=[].slice.call(d.querySelectorAll('h1,h2,h3,h4,h5,button,a,[role=button],div,span'));" +
+            "  for(var i=0;i<all.length;i++){" +
+            "   var t=norm((all[i].innerText||'').trim()).toUpperCase();" +
+            "   if((t==='COMPROVANTES DE MARCACOES'||t==='COMPROVANTE DE MARCACOES'||t.indexOf('COMPROVANTES DE MARCACOES')===0)&&t.length<120)return all[i];" +
             "  }" +
             " }catch(e){}" +
-            " var times=dated.length?dated:timeMatches(section);" +
-            " times=times.filter(function(v){return v!=='00:00'&&v!=='23:59';});" +
-            " if(times.length>8)times=times.slice(0,8);" +
-            " best={ok:times.length>0,loggedIn:true,day:today,times:times,message:times.length?'Marcações lidas dos comprovantes.':'Comprovantes encontrados, mas os horários ainda não apareceram.',frame:di};" +
-            " if(times.length)break;" +
+            " return null;" +
             "}" +
-            "if(best)return JSON.stringify(best);" +
+            "function collectAfterHeading(d,h){" +
+            " var texts=[];" +
+            " try{" +
+            "  var root=h;" +
+            "  for(var up=0;up<4&&root&&root.parentElement;up++){" +
+            "   var p=root.parentElement,txt=norm(p.innerText||'').toUpperCase();" +
+            "   if(txt.indexOf('COMPROVANTES DE MARCACOES')>=0 && txt.length<12000){root=p;}" +
+            "   else break;" +
+            "  }" +
+            "  var all=[].slice.call(root.querySelectorAll('*'));" +
+            "  var passed=false;" +
+            "  for(var i=0;i<all.length;i++){" +
+            "   var el=all[i];" +
+            "   if(el===h){passed=true;continue;}" +
+            "   if(!passed)continue;" +
+            "   var t=(el.innerText||'').trim();" +
+            "   if(!t||t.length>500)continue;" +
+            "   var nt=norm(t).toUpperCase();" +
+            "   if(/ESCALA DE TRABALHO|ULTIMA ATUALIZACAO|EMPRESA|FILIAL|COLABORADOR|CENTRO DE CUSTO/.test(nt))continue;" +
+            "   if(/(^|\\s)1:12(\\s|$)/.test(t))continue;" +
+            "   texts.push(t);" +
+            "  }" +
+            "  if(!texts.length){" +
+            "   var raw=(root.innerText||'');" +
+            "   var marker=norm(raw).toUpperCase().indexOf('COMPROVANTES DE MARCACOES');" +
+            "   if(marker>=0)texts.push(raw.slice(marker+'COMPROVANTES DE MARCACOES'.length));" +
+            "  }" +
+            " }catch(e){}" +
+            " return texts;" +
+            "}" +
+            "var ds=docs(),today=new Intl.DateTimeFormat('pt-BR',{timeZone:'America/Sao_Paulo',day:'2-digit',month:'2-digit',year:'numeric'}).format(new Date());" +
+            "for(var di=0;di<ds.length;di++){" +
+            " var d=ds[di],h=findHeading(d);if(!h)continue;" +
+            " var texts=collectAfterHeading(d,h),times=[],evidence=[];" +
+            " for(var k=0;k<texts.length;k++){" +
+            "  var t=texts[k],nt=norm(t).toUpperCase();" +
+            "  var hasDate=t.indexOf(today)>=0 || /\\b\\d{2}\\/\\d{2}\\/\\d{4}\\b/.test(t);" +
+            "  var looksReceipt=/COMPROVANTE|MARCACAO|DATA|HORA|NSR|LOCAL|ORIGEM|REGISTRO/.test(nt);" +
+            "  if(!hasDate && !looksReceipt && t.length>120)continue;" +
+            "  var tm=timeMatches(t);" +
+            "  for(var j=0;j<tm.length;j++){" +
+            "   var v=tm[j];" +
+            "   if(v==='00:00'||v==='23:59'||v==='01:12'||v==='08:00'||v==='18:00'){" +
+            "    if(!hasDate || /ESCALA|JORNADA|INTERVALO/.test(nt))continue;" +
+            "   }" +
+            "   if(times.indexOf(v)<0){times.push(v);evidence.push(t.slice(0,180));}" +
+            "  }" +
+            " }" +
+            " if(times.length>0){" +
+            "  return JSON.stringify({ok:true,loggedIn:true,day:today,times:times.slice(0,8),message:'Marcações lidas somente dos comprovantes.',frame:di,evidence:evidence.slice(0,8)});" +
+            " }" +
+            " return JSON.stringify({ok:false,loggedIn:true,day:today,times:[],message:'Comprovantes encontrados, mas ainda não identifiquei as batidas de hoje.',frame:di});" +
+            "}" +
             "var topText=(document.body&&document.body.innerText)||'',first=norm(topText).toUpperCase().slice(0,3000),u=location.href||'';" +
             "var login=/LOGIN|ENTRAR|USUARIO|SENHA|PASSWORD|AUTENTICACAO/.test(first)||/login|authentication|signin|sso/i.test(u);" +
             "return JSON.stringify({ok:false,loggedIn:!login,message:login?'Faça login na Senior para continuar.':'Aguardando a tela de Comprovantes de Marcação carregar.'});" +
