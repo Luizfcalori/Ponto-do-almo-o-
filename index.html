@@ -49,7 +49,7 @@
     .view.active{display:block}
 
     .home-hero{
-      min-height:0;
+      min-height:calc(100vh - 76px);
       padding:calc(20px + env(safe-area-inset-top)) 20px 18px;
       background:
         radial-gradient(circle at 85% 10%, rgba(35,136,255,.18), transparent 35%),
@@ -113,11 +113,15 @@
     .sync-sub{font-size:9.8px;color:var(--muted);margin-top:1px;max-width:220px}
     .senior-mark{font-weight:900;color:#0d8a69;font-size:15.5px;letter-spacing:-.3px}
 
-    .clock-zone{display:flex;justify-content:center;margin-top:10px}
+    .clock-zone{display:flex;justify-content:center;margin-top:12px}
     .clock-ring{
-      width:246px;height:246px;border-radius:50%;position:relative;display:grid;place-items:center;
-      background:conic-gradient(rgba(88,116,128,.42) 0 100%);
-      box-shadow:0 0 45px rgba(22,199,132,.10);
+      width:276px;height:276px;border-radius:50%;position:relative;display:grid;place-items:center;
+      background:conic-gradient(from 220deg,
+        rgba(44,190,154,.34) 0%,
+        rgba(49,155,194,.48) 34%,
+        rgba(58,111,164,.50) 66%,
+        rgba(46,187,150,.30) 100%);
+      box-shadow:0 0 46px rgba(49,155,194,.14);
       transition:background .45s ease,box-shadow .45s ease
     }
     .clock-ring:before{
@@ -127,27 +131,27 @@
     }
     .clock-content{position:relative;text-align:center;z-index:1;width:82%;display:flex;flex-direction:column;align-items:center;transform:translateY(-6px)}
     .clock-icon{
-      font-size:25px;margin-bottom:6px;line-height:1;display:grid;place-items:center;
+      font-size:28px;margin-bottom:7px;line-height:1;display:grid;place-items:center;
       transition:.3s ease
     }
-    .clock-state{font-size:10.5px;font-weight:850;letter-spacing:1.15px;color:#d8e7f2}
-    .clock-time{font-size:44px;line-height:1;font-weight:950;margin:6px 0 8px;letter-spacing:-1.7px}
-    .clock-subtitle{display:none;font-size:11.5px;font-weight:700;color:#eef7fb;margin-top:-2px}
-    .clock-meta{font-size:11px;color:#bed0df;line-height:1.4}
-    .clock-footer{display:none;font-size:9.3px;color:#9fb5c7;margin-top:6px;align-items:center;gap:7px}
+    .clock-state{font-size:11.5px;font-weight:850;letter-spacing:1.22px;color:#d8e7f2}
+    .clock-time{font-size:49px;line-height:1;font-weight:950;margin:6px 0 9px;letter-spacing:-1.9px}
+    .clock-subtitle{display:none;font-size:12.5px;font-weight:700;color:#eef7fb;margin-top:-2px}
+    .clock-meta{font-size:11.8px;color:#bed0df;line-height:1.45}
+    .clock-footer{display:none;font-size:9.8px;color:#9fb5c7;margin-top:7px;align-items:center;gap:7px}
     .clock-footer:before,.clock-footer:after{content:"";width:24px;height:1px;background:rgba(190,208,223,.34)}
     .clock-ring.enhanced .clock-icon{
-      width:40px;height:40px;border-radius:50%;font-size:19px;margin-bottom:7px;
+      width:45px;height:45px;border-radius:50%;font-size:21px;margin-bottom:8px;
       border:2px solid #42e7bd;background:rgba(20,199,144,.08);
       box-shadow:0 0 22px rgba(55,226,184,.27)
     }
-    .clock-ring.enhanced .clock-state{font-size:9.8px;letter-spacing:1.18px}
-    .clock-ring.enhanced .clock-time{font-size:41px;margin:5px 0 5px}
+    .clock-ring.enhanced .clock-state{font-size:10.5px;letter-spacing:1.25px}
+    .clock-ring.enhanced .clock-time{font-size:45px;margin:5px 0 6px}
     .clock-ring.enhanced .clock-subtitle{display:block}
     .clock-ring.enhanced .clock-meta{
-      width:170px;margin-top:7px;padding:6px 10px;border-radius:12px;
+      width:182px;margin-top:8px;padding:7px 11px;border-radius:13px;
       background:rgba(12,38,56,.72);border:1px solid rgba(147,197,220,.22);
-      text-align:left;font-size:9.8px;line-height:1.28;color:#c8d8e5
+      text-align:left;font-size:10.4px;line-height:1.3;color:#c8d8e5
     }
     .clock-ring.enhanced .clock-footer{display:flex}
     .clock-detail-row{display:flex;align-items:center;gap:8px;padding:2px 0}
@@ -156,26 +160,26 @@
     .clock-detail-row.accent{color:#43e6bd;font-weight:800}
     .clock-ring.mode-lunch{box-shadow:0 0 52px rgba(38,221,178,.20)}
     .clock-ring.mode-done{
-      width:242px;height:242px;
-      box-shadow:0 0 52px rgba(38,221,178,.18)
+      width:272px;height:272px;
+      box-shadow:0 0 48px rgba(49,155,194,.14)
     }
-    .clock-ring.mode-done .clock-content{width:80%;transform:translateY(-8px)}
+    .clock-ring.mode-done .clock-content{width:80%;transform:translateY(-7px)}
     .clock-ring.mode-done .clock-icon{
-      width:39px;height:39px;font-size:21px;font-weight:950;
-      margin-bottom:5px
+      width:44px;height:44px;font-size:23px;font-weight:950;
+      margin-bottom:6px
     }
     .clock-ring.mode-done .clock-state{
-      font-size:9.5px;letter-spacing:1.15px
+      font-size:10.5px;letter-spacing:1.2px
     }
     .clock-ring.mode-done .clock-time{
-      font-size:39px;margin:4px 0 3px;letter-spacing:-1.4px
+      font-size:44px;margin:4px 0 4px;letter-spacing:-1.5px
     }
     .clock-ring.mode-done .clock-subtitle{
-      font-size:10.5px;margin-top:0
+      font-size:11.5px;margin-top:0
     }
     .clock-ring.mode-done .clock-meta{
-      width:164px;margin-top:6px;padding:5px 9px;
-      border-radius:11px;font-size:9.1px;line-height:1.2
+      width:178px;margin-top:7px;padding:6px 10px;
+      border-radius:12px;font-size:9.8px;line-height:1.24
     }
     .clock-ring.mode-done .clock-detail-row{
       gap:6px;padding:1px 0
@@ -191,12 +195,12 @@
     .clock-ring.mode-done .clock-footer:after{width:14px}
 
     @media (max-width:390px){
-      .clock-ring{width:238px;height:238px}
-      .clock-ring.mode-done{width:234px;height:234px}
-      .clock-ring.mode-done .clock-icon{width:37px;height:37px;font-size:20px}
-      .clock-ring.mode-done .clock-time{font-size:37px}
-      .clock-ring.mode-done .clock-meta{width:158px;font-size:8.8px}
-      .clock-ring.mode-done .clock-footer{font-size:7.9px}
+      .clock-ring{width:264px;height:264px}
+      .clock-ring.mode-done{width:260px;height:260px}
+      .clock-ring.mode-done .clock-icon{width:42px;height:42px;font-size:22px}
+      .clock-ring.mode-done .clock-time{font-size:42px}
+      .clock-ring.mode-done .clock-meta{width:172px;font-size:9.5px}
+      .clock-ring.mode-done .clock-footer{font-size:8.5px}
     }
 
     .main-action{
@@ -227,15 +231,15 @@
     .summary-card.red .summary-value{color:#ff918a}
 
     @media (max-height:740px){
-      .home-hero{padding-top:calc(14px + env(safe-area-inset-top));padding-bottom:13px}
+      .home-hero{padding-top:calc(14px + env(safe-area-inset-top));padding-bottom:12px}
       .brand-icon{width:45px;height:45px;border-radius:15px;font-size:21px}
       .brand-title{font-size:19px}
       .brand-sub{font-size:11.5px}
       .greeting{margin-top:14px}
       .hero-divider{margin-top:9px}
-      .clock-zone{margin-top:7px}
-      .clock-ring{width:222px;height:222px}
-      .clock-ring.mode-done{width:218px;height:218px}
+      .clock-zone{margin-top:8px}
+      .clock-ring{width:248px;height:248px}
+      .clock-ring.mode-done{width:244px;height:244px}
       .clock-ring.mode-done .clock-content{transform:translateY(-7px)}
       .main-action{margin-top:7px;padding:10px 12px}
       .home-content{padding-top:7px}
@@ -783,18 +787,36 @@
   }
 
   function setClockRingProgress(percent){
-    const ring = document.querySelector('.clock-ring');
+    const ring = document.getElementById('homeClockRing');
     if(!ring) return;
+
+    const restingRing =
+      'conic-gradient(from 220deg,' +
+      'rgba(44,190,154,.34) 0%,' +
+      'rgba(49,155,194,.48) 34%,' +
+      'rgba(58,111,164,.50) 66%,' +
+      'rgba(46,187,150,.30) 100%)';
+
+    // Fora do almoço o aro fica azul/verde suave e translúcido.
+    // O verde sólido/progressivo é exclusivo do intervalo em andamento.
+    if(!ring.classList.contains('mode-lunch')){
+      ring.style.background = restingRing;
+      ring.style.boxShadow = '0 0 46px rgba(49,155,194,.14)';
+      return;
+    }
+
     const pct = Math.max(0,Math.min(100,Number(percent) || 0));
-    const track = 'rgba(88,116,128,.42)';
+    const track = 'rgba(67,126,151,.38)';
+
     if(pct <= 0){
       ring.style.background = 'conic-gradient(' + track + ' 0 100%)';
       ring.style.boxShadow = '0 0 45px rgba(22,199,132,.10)';
       return;
     }
+
     ring.style.background =
       'conic-gradient(var(--green) 0 ' + pct + '%, ' + track + ' ' + pct + '% 100%)';
-    ring.style.boxShadow = '0 0 45px rgba(22,199,132,.22)';
+    ring.style.boxShadow = '0 0 50px rgba(22,199,132,.24)';
   }
 
   function setHomeClockMode(mode){
