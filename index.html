@@ -967,6 +967,7 @@
 
       document.getElementById('seniorPassword').value = '';
       localStorage.setItem('seniorUsernameHint',username);
+      localStorage.setItem('seniorSessionKnown','1');
       setSeniorModalStatus('Conectado. Buscando suas marcações...','ok');
       setSeniorVisual('connected','Buscando suas marcações agora.');
       await syncSeniorClockings(false);
@@ -988,6 +989,7 @@
     }catch(_){}
     stopSeniorPolling();
     seniorConnected = false;
+    localStorage.removeItem('seniorSessionKnown');
     setSeniorVisual('disconnected','Toque aqui para conectar novamente.');
     setSeniorModalStatus('Conta desconectada deste aparelho.','');
     showToast('Senior desconectada.');
@@ -1094,18 +1096,33 @@
       }
 
       if(!response.ok || !data.ok){
-        setSeniorVisual('error',data.error || 'Não foi possível ler suas marcações.');
-        if(showFeedback){
-          setSeniorModalStatus(data.error || 'Não foi possível ler suas marcações.','bad');
-          openSeniorModal();
+        if(data.sessionHeld || data.connected){
+          seniorConnected = true;
+          setSeniorVisual('connected','Login ativo • ' + (data.error || 'consulta das marcações indisponível agora.'));
+          localStorage.setItem('seniorSessionKnown','1');
+          if(showFeedback){
+            setSeniorModalStatus(
+              'Seu login continua conectado. ' + (data.error || 'A leitura das marcações falhou nesta tentativa.'),
+              'bad'
+            );
+            openSeniorModal();
+          }
+        } else {
+          localStorage.removeItem('seniorSessionKnown');
+          setSeniorVisual('error',data.error || 'Não foi possível ler suas marcações.');
+          if(showFeedback){
+            setSeniorModalStatus(data.error || 'Não foi possível ler suas marcações.','bad');
+            openSeniorModal();
+          }
         }
         return false;
       }
 
+      localStorage.setItem('seniorSessionKnown','1');
       setSeniorVisual('connected',
         data.eventCount
           ? data.eventCount + (data.eventCount === 1 ? ' marcação encontrada hoje.' : ' marcações encontradas hoje.')
-          : 'Conectado. Aguardando sua primeira marcação de hoje.'
+          : 'Login ativo. Nenhuma marcação encontrada hoje ainda.'
       );
 
       const times = applySeniorEvents(data.events || []);
@@ -1166,6 +1183,11 @@
   async function initSenior(){
     const hint = localStorage.getItem('seniorUsernameHint');
     if(hint) document.getElementById('seniorUsername').value = hint;
+    if(localStorage.getItem('seniorSessionKnown') === '1'){
+      setSeniorVisual('connected','Validando sua sessão e atualizando marcações...');
+    } else {
+      setSeniorVisual('disconnected','Toque aqui para conectar sua conta.');
+    }
     const ok = await syncSeniorClockings(false);
     if(ok) startSeniorPolling();
   }
