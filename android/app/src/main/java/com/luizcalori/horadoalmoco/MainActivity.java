@@ -34,7 +34,7 @@ public class MainActivity extends Activity {
             "https://ponto-do-almoco-luiz.vercel.app/?native=1";
 
     private static final String RECEIPTS_URL =
-            "https://platform.senior.com.br/hcm-pontomobile/hcm/pontomobile/#/clocking-event-receipts";
+            "https://platform.senior.com.br/senior-x/#/Gest%C3%A3o%20de%20Pessoas%20%7C%20HCM/1/res:%2F%2Fsenior.com.br%2Fhcm%2Fpontomobile%2FclockingEventReceipts?category=frame&link=https:%2F%2Fplatform.senior.com.br%2Fhcm-pontomobile%2Fhcm%2Fpontomobile%2F%23%2Fclocking-event-receipts&withCredentials=true&r=2";
 
     private final Handler handler = new Handler(Looper.getMainLooper());
 
@@ -47,17 +47,31 @@ public class MainActivity extends Activity {
     private final String EXPAND_RECEIPTS_JS =
             "(function(){" +
             "function n(s){return (s||'').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').trim().toUpperCase();}" +
-            "var all=[].slice.call(document.querySelectorAll('button,a,[role=button],h1,h2,h3,h4,div,span'));" +
-            "var el=all.find(function(x){var t=n(x.innerText);return t.indexOf('COMPROVANTES DE MARCACOES')>=0 && t.length<120;});" +
-            "if(!el)return 'not-found';" +
-            "try{el.scrollIntoView({block:'center',behavior:'instant'});}catch(e){}" +
-            "var p=el;" +
-            "for(var i=0;i<5 && p;i++,p=p.parentElement){" +
-            " var tag=(p.tagName||'').toLowerCase();" +
-            " var role=p.getAttribute&&p.getAttribute('role');" +
-            " if(tag==='button'||tag==='a'||role==='button'||typeof p.onclick==='function'){try{p.click();return 'clicked';}catch(e){}}" +
+            "function docs(){" +
+            " var out=[document],seen=[];" +
+            " for(var q=0;q<out.length;q++){" +
+            "  var d=out[q];if(!d||seen.indexOf(d)>=0)continue;seen.push(d);" +
+            "  try{var fs=d.querySelectorAll('iframe');for(var i=0;i<fs.length;i++){try{var fd=fs[i].contentDocument;if(fd&&out.indexOf(fd)<0)out.push(fd);}catch(e){}}}catch(e){}" +
+            " }" +
+            " return out;" +
             "}" +
-            "try{el.click();return 'clicked-heading';}catch(e){return 'found';}" +
+            "var ds=docs();" +
+            "for(var di=0;di<ds.length;di++){" +
+            " var d=ds[di];" +
+            " try{" +
+            "  var all=[].slice.call(d.querySelectorAll('button,a,[role=button],h1,h2,h3,h4,div,span'));" +
+            "  var el=all.find(function(x){var t=n(x.innerText);return (t.indexOf('COMPROVANTES DE MARCACOES')>=0||t.indexOf('COMPROVANTE DE MARCACOES')>=0)&&t.length<160;});" +
+            "  if(!el)continue;" +
+            "  try{el.scrollIntoView({block:'center',behavior:'instant'});}catch(e){}" +
+            "  var p=el;" +
+            "  for(var j=0;j<6&&p;j++,p=p.parentElement){" +
+            "   var tag=(p.tagName||'').toLowerCase(),role=p.getAttribute&&p.getAttribute('role');" +
+            "   if(tag==='button'||tag==='a'||role==='button'||typeof p.onclick==='function'){try{p.click();return 'clicked-frame-'+di;}catch(e){}}" +
+            "  }" +
+            "  try{el.click();return 'clicked-heading-'+di;}catch(e){return 'found-'+di;}" +
+            " }catch(e){}" +
+            "}" +
+            "return 'not-found';" +
             "})()";
 
     private final String EXTRACT_RECEIPTS_JS =
@@ -68,35 +82,43 @@ public class MainActivity extends Activity {
             " while((m=re.exec(s||''))!==null){var v=String(m[2]).padStart(2,'0')+':'+m[3];if(out.indexOf(v)<0)out.push(v);}" +
             " return out;" +
             "}" +
-            "var body=document.body;" +
-            "if(!body)return JSON.stringify({ok:false,loggedIn:true,message:'Página da Senior ainda carregando.'});" +
-            "var full=body.innerText||'';" +
-            "var normalized=norm(full).toUpperCase();" +
-            "var marker='COMPROVANTES DE MARCACOES';" +
-            "var idx=normalized.indexOf(marker);" +
-            "if(idx<0){" +
-            " var u=location.href||'';" +
-            " var first=normalized.slice(0,2200);" +
-            " var login=/LOGIN|ENTRAR|USUARIO|SENHA|PASSWORD|AUTENTICACAO/.test(first)||/login|authentication|signin|sso/i.test(u);" +
-            " return JSON.stringify({ok:false,loggedIn:!login,message:login?'Faça login na Senior para continuar.':'Aguardando a área de comprovantes de marcação.'});" +
-            "}" +
-            "var section=full.slice(idx);" +
-            "var today=new Intl.DateTimeFormat('pt-BR',{timeZone:'America/Sao_Paulo',day:'2-digit',month:'2-digit',year:'numeric'}).format(new Date());" +
-            "var todayShort=today.slice(0,6)+today.slice(-2);" +
-            "var dated=[];" +
-            "var candidates=[].slice.call(document.querySelectorAll('body *'));" +
-            "for(var i=0;i<candidates.length;i++){" +
-            " var e=candidates[i],t=(e.innerText||'').trim();" +
-            " if(!t||t.length>700)continue;" +
-            " var nt=norm(t);" +
-            " if(nt.indexOf(today)>=0||nt.indexOf(todayShort)>=0){" +
-            "   var tm=timeMatches(t);for(var j=0;j<tm.length;j++)if(dated.indexOf(tm[j])<0)dated.push(tm[j]);" +
+            "function docs(){" +
+            " var out=[document],seen=[];" +
+            " for(var q=0;q<out.length;q++){" +
+            "  var d=out[q];if(!d||seen.indexOf(d)>=0)continue;seen.push(d);" +
+            "  try{var fs=d.querySelectorAll('iframe');for(var i=0;i<fs.length;i++){try{var fd=fs[i].contentDocument;if(fd&&out.indexOf(fd)<0)out.push(fd);}catch(e){}}}catch(e){}" +
             " }" +
+            " return out;" +
             "}" +
-            "var times=dated.length?dated:timeMatches(section);" +
-            "times=times.filter(function(v){return v!=='00:00'&&v!=='23:59';});" +
-            "if(times.length>8)times=times.slice(0,8);" +
-            "return JSON.stringify({ok:times.length>0,loggedIn:true,day:today,times:times,message:times.length?'Marcações lidas dos comprovantes.':'Comprovantes encontrados, mas os horários ainda não apareceram.'});" +
+            "var ds=docs(),best=null;" +
+            "for(var di=0;di<ds.length;di++){" +
+            " var d=ds[di],body=d&&d.body;if(!body)continue;" +
+            " var full=body.innerText||'',normalized=norm(full).toUpperCase();" +
+            " var idx=normalized.indexOf('COMPROVANTES DE MARCACOES');" +
+            " if(idx<0)idx=normalized.indexOf('COMPROVANTE DE MARCACOES');" +
+            " if(idx<0)continue;" +
+            " var section=full.slice(idx);" +
+            " var today=new Intl.DateTimeFormat('pt-BR',{timeZone:'America/Sao_Paulo',day:'2-digit',month:'2-digit',year:'numeric'}).format(new Date());" +
+            " var dated=[];" +
+            " try{" +
+            "  var nodes=[].slice.call(d.querySelectorAll('body *'));" +
+            "  for(var i=0;i<nodes.length;i++){" +
+            "   var t=(nodes[i].innerText||'').trim();if(!t||t.length>900)continue;" +
+            "   if(t.indexOf(today)>=0){" +
+            "    var tm=timeMatches(t);for(var j=0;j<tm.length;j++)if(dated.indexOf(tm[j])<0)dated.push(tm[j]);" +
+            "   }" +
+            "  }" +
+            " }catch(e){}" +
+            " var times=dated.length?dated:timeMatches(section);" +
+            " times=times.filter(function(v){return v!=='00:00'&&v!=='23:59';});" +
+            " if(times.length>8)times=times.slice(0,8);" +
+            " best={ok:times.length>0,loggedIn:true,day:today,times:times,message:times.length?'Marcações lidas dos comprovantes.':'Comprovantes encontrados, mas os horários ainda não apareceram.',frame:di};" +
+            " if(times.length)break;" +
+            "}" +
+            "if(best)return JSON.stringify(best);" +
+            "var topText=(document.body&&document.body.innerText)||'',first=norm(topText).toUpperCase().slice(0,3000),u=location.href||'';" +
+            "var login=/LOGIN|ENTRAR|USUARIO|SENHA|PASSWORD|AUTENTICACAO/.test(first)||/login|authentication|signin|sso/i.test(u);" +
+            "return JSON.stringify({ok:false,loggedIn:!login,message:login?'Faça login na Senior para continuar.':'Aguardando a tela de Comprovantes de Marcação carregar.'});" +
             "})()";
 
     @Override
@@ -249,7 +271,7 @@ public class MainActivity extends Activity {
 
                 if (isReceiptsUrl(url)) {
                     sendStatus("ready", "Comprovantes abertos. Lendo suas marcações...");
-                    handler.postDelayed(() -> expandAndRead(seniorVisible), 1200);
+                    handler.postDelayed(() -> expandAndRead(seniorVisible), 2400);
                 } else if (isSeniorUrl(url)) {
                     handler.postDelayed(() -> {
                         String current = seniorWebView.getUrl();
@@ -290,7 +312,8 @@ public class MainActivity extends Activity {
         return isSeniorUrl(url) &&
                 (u.contains("clocking-event-receipts") ||
                  u.contains("clockingeventreceipts") ||
-                 u.contains("clocking_event_receipts"));
+                 u.contains("clocking_event_receipts") ||
+                 u.contains("pontomobile%2fclockingeventreceipts"));
     }
 
     private void showSenior() {
@@ -362,10 +385,10 @@ public class MainActivity extends Activity {
                     return;
                 }
 
-                if (attempt < 3 && isReceiptsUrl(seniorWebView.getUrl())) {
+                if (attempt < 6 && isReceiptsUrl(seniorWebView.getUrl())) {
                     handler.postDelayed(
                             () -> readReceipts(returnToDashboardOnSuccess, attempt + 1),
-                            1400L + (attempt * 500L)
+                            1800L + (attempt * 650L)
                     );
                     return;
                 }
