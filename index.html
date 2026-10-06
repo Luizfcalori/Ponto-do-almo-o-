@@ -134,8 +134,48 @@
     .clock-detail-icon{width:17px;text-align:center;opacity:.95}
     .clock-detail-row.accent{color:#43e6bd;font-weight:800}
     .clock-ring.mode-lunch{box-shadow:0 0 52px rgba(38,221,178,.20)}
-    .clock-ring.mode-done{box-shadow:0 0 52px rgba(38,221,178,.18)}
-    .clock-ring.mode-done .clock-icon{font-size:27px;font-weight:950}
+    .clock-ring.mode-done{
+      width:276px;height:276px;
+      box-shadow:0 0 52px rgba(38,221,178,.18)
+    }
+    .clock-ring.mode-done .clock-content{width:80%}
+    .clock-ring.mode-done .clock-icon{
+      width:43px;height:43px;font-size:24px;font-weight:950;
+      margin-bottom:7px
+    }
+    .clock-ring.mode-done .clock-state{
+      font-size:10.5px;letter-spacing:1.25px
+    }
+    .clock-ring.mode-done .clock-time{
+      font-size:43px;margin:5px 0 4px;letter-spacing:-1.6px
+    }
+    .clock-ring.mode-done .clock-subtitle{
+      font-size:11.5px;margin-top:0
+    }
+    .clock-ring.mode-done .clock-meta{
+      width:172px;margin-top:8px;padding:6px 10px;
+      border-radius:12px;font-size:9.8px;line-height:1.25
+    }
+    .clock-ring.mode-done .clock-detail-row{
+      gap:6px;padding:1px 0
+    }
+    .clock-ring.mode-done .clock-detail-row + .clock-detail-row{
+      margin-top:3px;padding-top:4px
+    }
+    .clock-ring.mode-done .clock-detail-icon{width:14px}
+    .clock-ring.mode-done .clock-footer{
+      font-size:8.8px;margin-top:5px;gap:6px;white-space:nowrap
+    }
+    .clock-ring.mode-done .clock-footer:before,
+    .clock-ring.mode-done .clock-footer:after{width:14px}
+
+    @media (max-width:390px){
+      .clock-ring.mode-done{width:264px;height:264px}
+      .clock-ring.mode-done .clock-icon{width:40px;height:40px;font-size:22px}
+      .clock-ring.mode-done .clock-time{font-size:40px}
+      .clock-ring.mode-done .clock-meta{width:164px;font-size:9.3px}
+      .clock-ring.mode-done .clock-footer{font-size:8.2px}
+    }
 
     .main-action{
       width:100%;margin-top:22px;border:0;border-radius:18px;padding:17px 18px;
