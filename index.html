@@ -94,20 +94,48 @@
 
     .clock-zone{display:flex;justify-content:center;margin-top:28px}
     .clock-ring{
-      width:276px;height:276px;border-radius:50%;position:relative;display:grid;place-items:center;
+      width:286px;height:286px;border-radius:50%;position:relative;display:grid;place-items:center;
       background:conic-gradient(rgba(88,116,128,.42) 0 100%);
       box-shadow:0 0 45px rgba(22,199,132,.10);
-      transition:background .45s ease
+      transition:background .45s ease,box-shadow .45s ease
     }
     .clock-ring:before{
       content:"";position:absolute;inset:14px;border-radius:50%;
-      background:linear-gradient(160deg,#092236,#071827);box-shadow:inset 0 0 0 1px rgba(255,255,255,.06)
+      background:linear-gradient(160deg,#092236,#071827);
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.06)
     }
-    .clock-content{position:relative;text-align:center;z-index:1}
-    .clock-icon{font-size:30px;margin-bottom:8px}
-    .clock-state{font-size:12px;font-weight:800;letter-spacing:1px;color:#d8e7f2}
-    .clock-time{font-size:53px;line-height:1;font-weight:950;margin:8px 0 13px;letter-spacing:-2px}
+    .clock-content{position:relative;text-align:center;z-index:1;width:82%;display:flex;flex-direction:column;align-items:center}
+    .clock-icon{
+      font-size:29px;margin-bottom:8px;line-height:1;display:grid;place-items:center;
+      transition:.3s ease
+    }
+    .clock-state{font-size:12px;font-weight:850;letter-spacing:1.25px;color:#d8e7f2}
+    .clock-time{font-size:53px;line-height:1;font-weight:950;margin:8px 0 11px;letter-spacing:-2px}
+    .clock-subtitle{display:none;font-size:13px;font-weight:700;color:#eef7fb;margin-top:-3px}
     .clock-meta{font-size:12.5px;color:#bed0df;line-height:1.55}
+    .clock-footer{display:none;font-size:10.5px;color:#9fb5c7;margin-top:8px;align-items:center;gap:8px}
+    .clock-footer:before,.clock-footer:after{content:"";width:24px;height:1px;background:rgba(190,208,223,.34)}
+    .clock-ring.enhanced .clock-icon{
+      width:48px;height:48px;border-radius:50%;font-size:22px;margin-bottom:10px;
+      border:2px solid #42e7bd;background:rgba(20,199,144,.08);
+      box-shadow:0 0 22px rgba(55,226,184,.27)
+    }
+    .clock-ring.enhanced .clock-state{font-size:11px;letter-spacing:1.35px}
+    .clock-ring.enhanced .clock-time{font-size:48px;margin:7px 0 7px}
+    .clock-ring.enhanced .clock-subtitle{display:block}
+    .clock-ring.enhanced .clock-meta{
+      width:188px;margin-top:10px;padding:7px 12px;border-radius:14px;
+      background:rgba(12,38,56,.72);border:1px solid rgba(147,197,220,.22);
+      text-align:left;font-size:11px;line-height:1.35;color:#c8d8e5
+    }
+    .clock-ring.enhanced .clock-footer{display:flex}
+    .clock-detail-row{display:flex;align-items:center;gap:8px;padding:2px 0}
+    .clock-detail-row + .clock-detail-row{border-top:1px solid rgba(190,208,223,.18);margin-top:4px;padding-top:6px}
+    .clock-detail-icon{width:17px;text-align:center;opacity:.95}
+    .clock-detail-row.accent{color:#43e6bd;font-weight:800}
+    .clock-ring.mode-lunch{box-shadow:0 0 52px rgba(38,221,178,.20)}
+    .clock-ring.mode-done{box-shadow:0 0 52px rgba(38,221,178,.18)}
+    .clock-ring.mode-done .clock-icon{font-size:27px;font-weight:950}
 
     .main-action{
       width:100%;margin-top:22px;border:0;border-radius:18px;padding:17px 18px;
@@ -341,12 +369,14 @@
       </div>
 
       <div class="clock-zone">
-        <div class="clock-ring">
+        <div class="clock-ring" id="homeClockRing">
           <div class="clock-content">
-            <div class="clock-icon">🍴</div>
+            <div class="clock-icon" id="clockIcon">🍴</div>
             <div class="clock-state" id="workState">EM TRABALHO</div>
             <div class="clock-time" id="currentTime">--:--</div>
+            <div class="clock-subtitle" id="clockSubtitle"></div>
             <div class="clock-meta" id="clockMeta">Aguardando sua saída<br>para o almoço</div>
+            <div class="clock-footer" id="clockFooter"></div>
           </div>
         </div>
       </div>
@@ -627,6 +657,114 @@
     ring.style.boxShadow = '0 0 45px rgba(22,199,132,.22)';
   }
 
+  function setHomeClockMode(mode){
+    const ring = document.getElementById('homeClockRing');
+    const icon = document.getElementById('clockIcon');
+    const subtitle = document.getElementById('clockSubtitle');
+    const footer = document.getElementById('clockFooter');
+    if(!ring) return;
+
+    ring.classList.remove('enhanced','mode-lunch','mode-done');
+    if(mode === 'lunch'){
+      ring.classList.add('enhanced','mode-lunch');
+      if(icon) icon.textContent = '🍴';
+    } else if(mode === 'done'){
+      ring.classList.add('enhanced','mode-done');
+      if(icon) icon.textContent = '✓';
+    } else {
+      if(icon) icon.textContent = '🍴';
+    }
+
+    if(subtitle) subtitle.textContent = '';
+    if(footer) footer.textContent = '';
+  }
+
+  function resetHomeClockVisual(){
+    setHomeClockMode('default');
+    document.getElementById('currentTime').textContent = '--:--';
+  }
+
+  function formatElapsedMinutes(totalMinutes){
+    const safe = Math.max(0,Math.floor(Number(totalMinutes) || 0));
+    return pad(Math.floor(safe / 60)) + ':' + pad(safe % 60);
+  }
+
+  function getLunchTiming(saida,retorno){
+    const now = new Date();
+    const startParts = String(saida || '').split(':').map(Number);
+    const endParts = String(retorno || '').split(':').map(Number);
+    if(startParts.length < 2 || endParts.length < 2) return null;
+
+    const start = new Date(now);
+    start.setHours(startParts[0],startParts[1],0,0);
+    const end = new Date(now);
+    end.setHours(endParts[0],endParts[1],0,0);
+    if(end <= start) end.setDate(end.getDate()+1);
+
+    const total = Math.max(1,end-start);
+    const elapsed = Math.max(0,Math.min(total,now-start));
+    const remaining = Math.max(0,end-now);
+    return {
+      pct:Math.round((elapsed/total)*100),
+      elapsedMin:Math.floor(elapsed/60000),
+      remainMin:Math.ceil(remaining/60000),
+      remainingMs:remaining
+    };
+  }
+
+  function renderLunchClock(saida,retorno){
+    if(!saida || !retorno) return;
+    const timing = getLunchTiming(saida,retorno);
+    if(!timing) return;
+
+    setHomeClockMode('lunch');
+    setClockRingProgress(timing.remainingMs > 0 ? timing.pct : 100);
+
+    document.getElementById('workState').textContent =
+      timing.remainingMs > 0 ? 'ALMOÇO EM ANDAMENTO' : 'RETORNO PREVISTO';
+    document.getElementById('currentTime').textContent = formatElapsedMinutes(timing.elapsedMin);
+    document.getElementById('clockSubtitle').textContent =
+      timing.remainingMs > 0 ? 'Tempo de almoço' : 'Intervalo concluído';
+    document.getElementById('clockMeta').innerHTML =
+      '<div class="clock-detail-row"><span class="clock-detail-icon">◷</span><span>Início ' + saida + '</span></div>' +
+      '<div class="clock-detail-row accent"><span class="clock-detail-icon">↩</span><span>Retorno previsto ' + retorno + '</span></div>';
+    document.getElementById('clockFooter').textContent =
+      timing.remainingMs > 0
+        ? timing.remainMin + (timing.remainMin === 1 ? ' min restante' : ' min restantes')
+        : 'Hora de retornar';
+
+    document.getElementById('mainActionTitle').textContent = 'Retorno previsto do almoço';
+    document.getElementById('mainActionSub').textContent =
+      'Previsto para ' + retorno + ' • saída ' + saida;
+    document.querySelector('.main-action').onclick = function(){ goView('lunch'); };
+  }
+
+  function renderFinishedClock(exitTime,expectedTime){
+    if(!exitTime) return;
+    setHomeClockMode('done');
+    setClockRingProgress(100);
+
+    document.getElementById('workState').textContent = 'JORNADA ENCERRADA';
+    document.getElementById('currentTime').textContent = exitTime;
+    document.getElementById('clockSubtitle').textContent = 'Saída registrada';
+
+    let deltaText = 'Saída registrada na Senior';
+    const exitMin = minutesFromTime(exitTime);
+    const expectedMin = minutesFromTime(expectedTime);
+    if(exitMin !== null && expectedMin !== null){
+      const delta = exitMin - expectedMin;
+      const abs = Math.abs(delta);
+      if(delta < 0) deltaText = abs + ' min antes do previsto';
+      else if(delta > 0) deltaText = abs + ' min após o previsto';
+      else deltaText = 'No horário previsto';
+    }
+
+    document.getElementById('clockMeta').innerHTML =
+      '<div class="clock-detail-row"><span class="clock-detail-icon">◷</span><span>Previsto ' + (expectedTime || '--:--') + '</span></div>' +
+      '<div class="clock-detail-row accent"><span class="clock-detail-icon">✓</span><span>' + deltaText + '</span></div>';
+    document.getElementById('clockFooter').textContent = 'Jornada de hoje concluída';
+  }
+
   function atualizarRelogio(){
     const agora = new Date();
     document.getElementById('currentTime').textContent = '--:--';
@@ -831,10 +969,7 @@
     document.getElementById('lunchHeroText').textContent = 'Sua saída foi registrada no Hora do Almoço e o retorno já foi calculado.';
     document.getElementById('sumLunchOut').textContent = valor;
     document.getElementById('sumReturn').textContent = retorno;
-    document.getElementById('workState').textContent = 'EM INTERVALO';
-    setClockRingProgress(0);
-    document.getElementById('clockMeta').innerHTML = 'Saída ' + valor + '<br>Retorno previsto ' + retorno;
-    // Mantém o card principal reservado para a previsão de saída do trabalho.
+    renderLunchClock(valor,retorno);
 
     salvarHistorico(valor,retorno);
     localStorage.setItem('almocoAtivo',JSON.stringify({saida:valor,retorno:retorno,data:new Date().toISOString()}));
@@ -847,7 +982,8 @@
   function atualizarProgresso(){
     const ativo = JSON.parse(localStorage.getItem('almocoAtivo') || 'null');
     if(!ativo){
-      setClockRingProgress(0);
+      const ring = document.getElementById('homeClockRing');
+      if(!(ring && ring.classList.contains('mode-done'))) setClockRingProgress(0);
       return;
     }
 
@@ -867,7 +1003,7 @@
     const pct = Math.round((elapsed/total)*100);
     const remaining = Math.max(0,end-now);
 
-    setClockRingProgress(remaining > 0 ? pct : 0);
+    renderLunchClock(ativo.saida,ativo.retorno);
 
     const elapsedMin = Math.floor(elapsed/60000);
     const remainMin = Math.ceil(remaining/60000);
@@ -881,9 +1017,7 @@
     if(rem) rem.textContent = remaining > 0 ? 'Tempo restante ' + remainMin + ' min' : 'Hora de retornar';
 
     if(remaining <= 0){
-      setClockRingProgress(0);
-      document.getElementById('workState').textContent = 'RETORNO PREVISTO';
-      document.getElementById('clockMeta').innerHTML = 'Seu intervalo de 1h12<br>já terminou';
+      renderLunchClock(ativo.saida,ativo.retorno);
     }
   }
 
@@ -1037,8 +1171,7 @@
       document.getElementById('lunchHeroText').textContent = 'Seu último horário de almoço está sendo acompanhado neste aparelho.';
       document.getElementById('sumLunchOut').textContent = ativo.saida;
       document.getElementById('sumReturn').textContent = ativo.retorno;
-      document.getElementById('workState').textContent = 'EM INTERVALO';
-      document.getElementById('clockMeta').innerHTML = 'Saída ' + ativo.saida + '<br>Retorno previsto ' + ativo.retorno;
+      renderLunchClock(ativo.saida,ativo.retorno);
 
       const rp = ativo.retorno.split(':').map(Number);
       ultimoRetornoHora = rp[0];
@@ -1052,6 +1185,7 @@
     }
 
     updateScheduledWorkCard();
+    if(ativo) renderLunchClock(ativo.saida,ativo.retorno);
 
     mostrarHistorico();
     atualizarEstatisticas();
@@ -1318,12 +1452,7 @@
     document.getElementById('lunchHeroText').textContent = 'Sua saída foi reconhecida automaticamente e o retorno foi calculado em +1h12.';
     document.getElementById('sumLunchOut').textContent = saida;
     document.getElementById('sumReturn').textContent = retorno;
-    document.getElementById('workState').textContent = 'EM INTERVALO';
-    setClockRingProgress(0);
-    document.getElementById('clockMeta').innerHTML = 'Saída Senior ' + saida + '<br>Retorno previsto ' + retorno;
-    document.getElementById('mainActionTitle').textContent = 'Acompanhar intervalo';
-    document.getElementById('mainActionSub').textContent = 'Retorno previsto às ' + retorno;
-    document.querySelector('.main-action').onclick = function(){ goView('lunch'); };
+    renderLunchClock(saida,retorno);
 
     const rp = retorno.split(':').map(Number);
     ultimoRetornoHora = rp[0];
@@ -1480,9 +1609,8 @@
       registerSeniorLunch(lunchOut);
     }
 
-    // O relógio central não exibe mais a hora atual.
-    document.getElementById('currentTime').textContent = '--:--';
-
+    // O relógio central exibe informação contextual, nunca a hora atual.
+    resetHomeClockVisual();
     updateScheduledWorkCard();
 
     if(!entry){
@@ -1501,9 +1629,7 @@
     }
 
     if(lunchOut && !lunchReturn){
-      document.getElementById('workState').textContent = 'EM INTERVALO';
-      document.getElementById('clockMeta').innerHTML =
-        'Saída almoço ' + lunchOut + '<br>Retorno previsto ' + (calcReturnFromTime(lunchOut) || '--:--');
+      renderLunchClock(lunchOut,calcReturnFromTime(lunchOut) || '--:--');
     }
 
     if(lunchReturn && !exit){
@@ -1519,14 +1645,10 @@
     }
 
     if(exit){
-      setClockRingProgress(0);
       if(window.AndroidSenior && typeof window.AndroidSenior.cancelReturnAlarms === 'function'){
         window.AndroidSenior.cancelReturnAlarms();
       }
-      document.getElementById('workState').textContent = 'JORNADA ENCERRADA';
-      document.getElementById('clockMeta').innerHTML =
-        'Última marcação ' + exit +
-        (expectedWorkEnd ? '<br>Prevista ' + expectedWorkEnd : '<br>Saída registrada na Senior');
+      renderFinishedClock(exit,expectedWorkEnd);
       localStorage.removeItem('almocoAtivo');
     }
 
