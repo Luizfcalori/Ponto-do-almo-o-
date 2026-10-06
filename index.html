@@ -322,7 +322,7 @@
 
       <div class="greeting">
         <div>
-          <div class="greet-main">Olá, Sócio! ☀️</div>
+          <div class="greet-main" id="greetMain">Olá! ☀️</div>
           <div class="greet-sub">Bom trabalho hoje!</div>
         </div>
         <div class="date-small" id="todayText">--</div>
@@ -602,7 +602,7 @@
 
   function atualizarRelogio(){
     const agora = new Date();
-    document.getElementById('currentTime').textContent = pad(agora.getHours()) + ':' + pad(agora.getMinutes());
+    document.getElementById('currentTime').textContent = '--:--';
     document.getElementById('todayText').innerHTML =
       agora.toLocaleDateString('pt-BR',{weekday:'long'}) + '<br>' +
       agora.toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
@@ -675,9 +675,7 @@
     document.getElementById('sumReturn').textContent = retorno;
     document.getElementById('workState').textContent = 'EM INTERVALO';
     document.getElementById('clockMeta').innerHTML = 'Saída ' + valor + '<br>Retorno previsto ' + retorno;
-    document.getElementById('mainActionTitle').textContent = 'Acompanhar intervalo';
-    document.getElementById('mainActionSub').textContent = 'Retorno previsto às ' + retorno;
-    document.querySelector('.main-action').onclick = function(){ goView('lunch'); };
+    // Mantém o card principal reservado para a previsão de saída do trabalho.
 
     salvarHistorico(valor,retorno);
     localStorage.setItem('almocoAtivo',JSON.stringify({saida:valor,retorno:retorno,data:new Date().toISOString()}));
@@ -837,6 +835,13 @@
   }
 
   function restaurarEstado(){
+    const savedFirstName = localStorage.getItem('seniorFirstName');
+    if(savedFirstName){
+      const greet = document.getElementById('greetMain');
+      if(greet) greet.textContent = 'Olá, ' + savedFirstName + '! ☀️';
+    }
+    document.getElementById('currentTime').textContent = '--:--';
+
     notifyEnabled = localStorage.getItem('notifyEnabled') !== '0';
     document.getElementById('notifyToggle').classList.toggle('on',notifyEnabled);
 
@@ -854,9 +859,7 @@
       document.getElementById('sumReturn').textContent = ativo.retorno;
       document.getElementById('workState').textContent = 'EM INTERVALO';
       document.getElementById('clockMeta').innerHTML = 'Saída ' + ativo.saida + '<br>Retorno previsto ' + ativo.retorno;
-      document.getElementById('mainActionTitle').textContent = 'Acompanhar intervalo';
-      document.getElementById('mainActionSub').textContent = 'Retorno previsto às ' + ativo.retorno;
-      document.querySelector('.main-action').onclick = function(){ goView('lunch'); };
+      // A ação principal será atualizada pelas marcações da Senior com a previsão de saída do trabalho.
 
       const rp = ativo.retorno.split(':').map(Number);
       ultimoRetornoHora = rp[0];
@@ -913,6 +916,8 @@
         }
         return;
       }
+
+      applySeniorIdentityAndSchedule(data);
 
       const times = Array.isArray(data.times) ? data.times : [];
       const events = times.map(function(time,index){
@@ -1123,33 +1128,121 @@
     showToast('Senior detectou sua saída às ' + saida + '. Retorno: ' + retorno + '.');
   }
 
+  function minutesFromTime(value){
+    if(!value || typeof value !== 'string') return null;
+    const p = value.split(':').map(Number);
+    if(p.length < 2 || Number.isNaN(p[0]) || Number.isNaN(p[1])) return null;
+    return p[0] * 60 + p[1];
+  }
+
+  function timeFromMinutes(total){
+    total = ((total % (24*60)) + (24*60)) % (24*60);
+    return pad(Math.floor(total / 60)) + ':' + pad(total % 60);
+  }
+
+  function calculateExpectedWorkEnd(firstClocking){
+    const first = minutesFromTime(firstClocking);
+    if(first === null) return null;
+
+    const scheduleStart = localStorage.getItem('seniorScheduleStart');
+    const scheduleEnd = localStorage.getItem('seniorScheduleEnd');
+    const startMin = minutesFromTime(scheduleStart);
+    const endMin = minutesFromTime(scheduleEnd);
+
+    let span = null;
+    if(startMin !== null && endMin !== null){
+      span = endMin - startMin;
+      if(span <= 0) span += 24 * 60;
+    }
+
+    // Fallback da jornada atual: 08:00 às 18:00 = 10 horas de permanência.
+    if(span === null || span < 60 || span > 16 * 60) span = 10 * 60;
+
+    return timeFromMinutes(first + span);
+  }
+
+  function applySeniorIdentityAndSchedule(data){
+    if(data && data.firstName){
+      const clean = String(data.firstName).trim();
+      if(clean){
+        const formatted = clean.charAt(0).toUpperCase() + clean.slice(1).toLowerCase();
+        localStorage.setItem('seniorFirstName', formatted);
+        const greet = document.getElementById('greetMain');
+        if(greet) greet.textContent = 'Olá, ' + formatted + '! ☀️';
+      }
+    } else {
+      const saved = localStorage.getItem('seniorFirstName');
+      if(saved){
+        const greet = document.getElementById('greetMain');
+        if(greet) greet.textContent = 'Olá, ' + saved + '! ☀️';
+      }
+    }
+
+    if(data && data.scheduleStart) localStorage.setItem('seniorScheduleStart', data.scheduleStart);
+    if(data && data.scheduleEnd) localStorage.setItem('seniorScheduleEnd', data.scheduleEnd);
+  }
+
   function applySeniorEvents(events){
     const times = (events || []).map(function(e){ return e.time; }).filter(Boolean);
 
-    document.getElementById('sumEntry').textContent = times[0] || '--:--';
-    document.getElementById('sumLunchOut').textContent = times[1] || '--:--';
+    const entry = times[0] || null;
+    const lunchOut = times[1] || null;
+    const lunchReturn = times[2] || null;
+    const exit = times[3] || null;
+    const expectedWorkEnd = entry ? calculateExpectedWorkEnd(entry) : null;
 
-    if(times[2]){
-      document.getElementById('sumReturn').textContent = times[2];
-    } else if(times[1]){
-      document.getElementById('sumReturn').textContent = calcReturnFromTime(times[1]) || '--:--';
+    document.getElementById('sumEntry').textContent = entry || '--:--';
+    document.getElementById('sumLunchOut').textContent = lunchOut || '--:--';
+
+    if(lunchReturn){
+      document.getElementById('sumReturn').textContent = lunchReturn;
+    } else if(lunchOut){
+      document.getElementById('sumReturn').textContent = calcReturnFromTime(lunchOut) || '--:--';
     } else {
       document.getElementById('sumReturn').textContent = '--:--';
     }
 
-    document.getElementById('sumExit').textContent = times[3] || '--:--';
+    document.getElementById('sumExit').textContent = exit || '--:--';
 
-    if(times[1]) registerSeniorLunch(times[1]);
+    if(lunchOut) registerSeniorLunch(lunchOut);
 
-    if(times[2]){
+    // O relógio central não exibe mais a hora atual.
+    document.getElementById('currentTime').textContent = '--:--';
+
+    if(entry && expectedWorkEnd){
+      document.getElementById('mainActionTitle').textContent = 'Saída prevista do trabalho';
+      document.getElementById('mainActionSub').textContent =
+        'Prevista para ' + expectedWorkEnd + ' • entrada ' + entry;
+      document.querySelector('.main-action').onclick = function(){ goView('home'); };
+    }
+
+    if(entry && !lunchOut){
       document.getElementById('workState').textContent = 'EM TRABALHO';
-      document.getElementById('clockMeta').innerHTML = 'Retorno registrado ' + times[2] + '<br>pela Senior';
+      document.getElementById('clockMeta').innerHTML =
+        'Entrada ' + entry +
+        (expectedWorkEnd ? '<br>Saída prevista ' + expectedWorkEnd : '');
+    }
+
+    if(lunchOut && !lunchReturn){
+      document.getElementById('workState').textContent = 'EM INTERVALO';
+      document.getElementById('clockMeta').innerHTML =
+        'Saída almoço ' + lunchOut + '<br>Retorno previsto ' + (calcReturnFromTime(lunchOut) || '--:--');
+    }
+
+    if(lunchReturn && !exit){
+      document.getElementById('workState').textContent = 'EM TRABALHO';
+      document.getElementById('clockMeta').innerHTML =
+        'Retorno registrado ' + lunchReturn +
+        (expectedWorkEnd ? '<br>Saída prevista ' + expectedWorkEnd : '');
       localStorage.removeItem('almocoAtivo');
     }
 
-    if(times[3]){
+    if(exit){
       document.getElementById('workState').textContent = 'JORNADA ENCERRADA';
-      document.getElementById('clockMeta').innerHTML = 'Última marcação ' + times[3] + '<br>Saída registrada na Senior';
+      document.getElementById('clockMeta').innerHTML =
+        'Última marcação ' + exit +
+        (expectedWorkEnd ? '<br>Prevista ' + expectedWorkEnd : '<br>Saída registrada na Senior');
+      localStorage.removeItem('almocoAtivo');
     }
 
     return times;
