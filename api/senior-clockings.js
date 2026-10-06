@@ -131,11 +131,25 @@ async function seniorFetch(path, session, options = {}) {
     data = null;
   }
 
+  if (!response.ok) {
+    const safeMessage =
+      data?.message ||
+      data?.error ||
+      data?.reason ||
+      data?.detail ||
+      (typeof data === 'string' ? data : null) ||
+      'sem mensagem';
+    console.warn('[Senior]', JSON.stringify({
+      path,
+      status: response.status,
+      message: String(safeMessage).slice(0, 220)
+    }));
+  }
+
   return {
     ok: response.ok,
     status: response.status,
-    data,
-    bodyPreview: text ? text.slice(0, 280) : ''
+    data
   };
 }
 
@@ -174,35 +188,81 @@ module.exports = async (req, res) => {
     const today = todaySaoPaulo();
 
     // Consulta feita para o próprio usuário autenticado.
-    // A Senior descreve clockingEventByActiveUserQuery como a rota que
-    // recupera as marcações do colaborador do usuário que fez a requisição.
-    const selfBody = {
-      filter: {
-        pageInfo: {
-          pageSize: 250,
-          page: 0
-        },
-        period: {
-          initialDate: today,
-          finalDate: today,
-          initialTime: '00:00:00',
-          finalTime: '23:59:59'
+    // Testamos variações compatíveis com diferentes versões/configurações
+    // do serviço Senior, sempre limitadas ao próprio usuário autenticado.
+    const attempts = [
+      {
+        name: 'minimal-page0',
+        body: {
+          filter: {
+            pageInfo: { pageSize: 100, page: 0 }
+          }
+        }
+      },
+      {
+        name: 'today-page0',
+        body: {
+          filter: {
+            pageInfo: { pageSize: 100, page: 0 },
+            period: {
+              initialDate: today,
+              finalDate: today
+            }
+          }
+        }
+      },
+      {
+        name: 'minimal-page1',
+        body: {
+          filter: {
+            pageInfo: { pageSize: 100, page: 1 }
+          }
+        }
+      },
+      {
+        name: 'today-page1',
+        body: {
+          filter: {
+            pageInfo: { pageSize: 100, page: 1 },
+            period: {
+              initialDate: today,
+              finalDate: today
+            }
+          }
         }
       }
-    };
+    ];
 
-    let clockResp = await seniorFetch(
-      '/queries/clockingEventByActiveUserQuery',
-      session,
-      {
-        method: 'POST',
-        body: JSON.stringify(selfBody)
+    let clockResp = null;
+    let attemptUsed = null;
+    const attemptStatuses = [];
+
+    for (const attempt of attempts) {
+      const resp = await seniorFetch(
+        '/queries/clockingEventByActiveUserQuery',
+        session,
+        {
+          method: 'POST',
+          body: JSON.stringify(attempt.body)
+        }
+      );
+
+      attemptStatuses.push(attempt.name + ':' + resp.status);
+
+      if (resp.ok || resp.status === 401 || resp.status === 403) {
+        clockResp = resp;
+        attemptUsed = attempt.name;
+        break;
       }
-    );
+    }
 
-    // Fallback para instalações antigas da Senior que não tenham a consulta
-    // self-service habilitada, mas liberem a identificação do colaborador.
-    if (!clockResp.ok && clockResp.status !== 401) {
+    if (!clockResp) {
+      clockResp = { ok:false, status:500, data:null };
+    }
+
+    // Fallback: instalações em que a rota self-service não responde,
+    // mas o vínculo usuário -> colaborador está disponível.
+    if (!clockResp.ok && clockResp.status !== 401 && clockResp.status !== 403) {
       const employeeResp = await seniorFetch(
         '/queries/employeeByUserQuery',
         session,
@@ -221,25 +281,52 @@ module.exports = async (req, res) => {
         null;
 
       if (employeeResp.ok && employeeId) {
-        const employeeBody = {
-          employeeId,
-          filter: selfBody.filter
-        };
-
-        const fallbackResp = await seniorFetch(
-          '/queries/clockingEventBetweenPeriodByEmployeeQuery',
-          session,
+        const fallbackBodies = [
           {
-            method: 'POST',
-            body: JSON.stringify(employeeBody)
+            employeeId,
+            filter: { pageInfo: { pageSize: 100, page: 0 } }
+          },
+          {
+            employeeId,
+            filter: {
+              pageInfo: { pageSize: 100, page: 0 },
+              period: { initialDate: today, finalDate: today }
+            }
+          },
+          {
+            employeeId,
+            filter: { pageInfo: { pageSize: 100, page: 1 } }
           }
-        );
+        ];
 
-        if (fallbackResp.ok || fallbackResp.status === 401) {
-          clockResp = fallbackResp;
+        for (let i = 0; i < fallbackBodies.length; i++) {
+          const fallbackResp = await seniorFetch(
+            '/queries/clockingEventBetweenPeriodByEmployeeQuery',
+            session,
+            {
+              method: 'POST',
+              body: JSON.stringify(fallbackBodies[i])
+            }
+          );
+
+          attemptStatuses.push('employee-' + i + ':' + fallbackResp.status);
+
+          if (fallbackResp.ok || fallbackResp.status === 401 || fallbackResp.status === 403) {
+            clockResp = fallbackResp;
+            attemptUsed = 'employee-' + i;
+            break;
+          }
         }
+      } else {
+        attemptStatuses.push('employeeByUser:' + employeeResp.status);
       }
     }
+
+    console.log('[Senior sync]', JSON.stringify({
+      status: clockResp.status,
+      attemptUsed,
+      attemptStatuses
+    }));
 
     if (clockResp.status === 401) {
       return res.status(401).json({
@@ -268,7 +355,9 @@ module.exports = async (req, res) => {
         sessionHeld: true,
         error: 'Seu login continua ativo, mas a Senior não retornou suas marcações nesta tentativa.',
         step: 'active-user-clockings',
-        seniorStatus: clockResp.status
+        seniorStatus: clockResp.status,
+        attemptUsed,
+        attemptStatuses
       });
     }
 
@@ -284,7 +373,9 @@ module.exports = async (req, res) => {
       events: todayEvents,
       eventCount: todayEvents.length,
       scannedCount: events.length,
-      source: 'active-user-clockings'
+      source: 'active-user-clockings',
+      attemptUsed,
+      attemptStatuses
     });
   } catch (error) {
     return res.status(401).json({
