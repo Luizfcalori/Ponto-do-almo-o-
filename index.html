@@ -322,7 +322,7 @@
 
       <div class="greeting">
         <div>
-          <div class="greet-main" id="greetMain">Olá! ☀️</div>
+          <div class="greet-main" id="greetMain">Olá, Luiz! ☀️</div>
           <div class="greet-sub">Bom trabalho hoje!</div>
         </div>
         <div class="date-small" id="todayText">--</div>
@@ -835,7 +835,7 @@
   }
 
   function restaurarEstado(){
-    const savedFirstName = localStorage.getItem('seniorFirstName');
+    const savedFirstName = localStorage.getItem('seniorFirstName') || 'Luiz';
     if(savedFirstName){
       const greet = document.getElementById('greetMain');
       if(greet) greet.textContent = 'Olá, ' + savedFirstName + '! ☀️';
@@ -933,10 +933,8 @@
         return;
       }
 
-      const times = Array.isArray(data.times) ? data.times : [];
-      const events = times.map(function(time,index){
-        return {id:'native-' + index,time:time,day:data.day || '',origin:'Senior WebView'};
-      });
+      const events = sanitizeSeniorClockings(data);
+      const times = events.map(function(e){ return e.time; });
 
       seniorConnected = true;
       localStorage.setItem('seniorSessionKnown','1');
@@ -1183,11 +1181,9 @@
         if(greet) greet.textContent = 'Olá, ' + formatted + '! ☀️';
       }
     } else {
-      const saved = localStorage.getItem('seniorFirstName');
-      if(saved){
-        const greet = document.getElementById('greetMain');
-        if(greet) greet.textContent = 'Olá, ' + saved + '! ☀️';
-      }
+      const saved = localStorage.getItem('seniorFirstName') || 'Luiz';
+      const greet = document.getElementById('greetMain');
+      if(greet) greet.textContent = 'Olá, ' + saved + '! ☀️';
     }
 
     if(data && data.scheduleStart) localStorage.setItem('seniorScheduleStart', data.scheduleStart);
@@ -1197,13 +1193,63 @@
     updateScheduledWorkCard();
   }
 
+  function sanitizeSeniorClockings(data){
+    const rawTimes = Array.isArray(data && data.times) ? data.times.filter(Boolean) : [];
+    const evidence = Array.isArray(data && data.evidence) ? data.evidence : [];
+    const scheduleStart = (data && data.scheduleStart) || localStorage.getItem('seniorScheduleStart');
+    const scheduleEnd = (data && data.scheduleEnd) || localStorage.getItem('seniorScheduleEnd');
+    const scheduleBreak = (data && data.scheduleBreak) || localStorage.getItem('seniorScheduleBreak');
+
+    let cleaned = rawTimes.map(function(time,index){
+      return {time:time,evidence:String(evidence[index] || '')};
+    });
+
+    // A Senior também mostra 08:00-18:00 e 1:12 na mesma tela.
+    // Quando vierem mais de 4 horários, remove os valores da escala que não são batidas.
+    if(cleaned.length > 4){
+      cleaned = cleaned.filter(function(item){
+        const txt = item.evidence.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
+        if(/ESCALA DE TRABALHO|ULTIMA ATUALIZACAO|JORNADA|INTERVALO/.test(txt)) return false;
+        if(scheduleBreak && item.time === scheduleBreak) return false;
+        if(scheduleStart && scheduleEnd && txt.indexOf(scheduleStart) >= 0 && txt.indexOf(scheduleEnd) >= 0) return false;
+        return true;
+      });
+
+      // Proteção extra para o formato atual da Senior: se 08:00/18:00 vierem
+      // misturados às batidas reais, retira somente uma ocorrência de cada escala.
+      if(cleaned.length > 4){
+        let removedStart = false, removedEnd = false;
+        cleaned = cleaned.filter(function(item){
+          if(!removedStart && scheduleStart && item.time === scheduleStart){
+            removedStart = true;
+            return false;
+          }
+          if(!removedEnd && scheduleEnd && item.time === scheduleEnd){
+            removedEnd = true;
+            return false;
+          }
+          return true;
+        });
+      }
+    }
+
+    const seen = {};
+    return cleaned.filter(function(item){
+      if(seen[item.time]) return false;
+      seen[item.time] = true;
+      return true;
+    }).map(function(item,index){
+      return {id:'native-clean-' + index,time:item.time,origin:'Senior WebView'};
+    });
+  }
+
   function applySeniorEvents(events){
     const times = (events || []).map(function(e){ return e.time; }).filter(Boolean);
 
     const entry = times[0] || null;
     const lunchOut = times[1] || null;
     const lunchReturn = times[2] || null;
-    const exit = times[3] || null;
+    const exit = times.length >= 4 ? times[times.length - 1] : null;
     const schedule = getExpectedSchedule();
     const expectedWorkStart = schedule.start;
     const expectedWorkEnd = calculateExpectedWorkEnd();
