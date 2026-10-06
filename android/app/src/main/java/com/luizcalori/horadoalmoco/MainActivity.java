@@ -13,6 +13,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.provider.Settings;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -160,17 +161,34 @@ public class MainActivity extends Activity {
             " var scheduleStart=scheduleMatch?(String(scheduleMatch[1]).padStart(2,'0')+':'+scheduleMatch[2]):null;" +
             " var scheduleEnd=scheduleMatch?(String(scheduleMatch[3]).padStart(2,'0')+':'+scheduleMatch[4]):null;" +
             " var scheduleBreak=scheduleMatch?scheduleMatch[5]:null;" +
-            " var lines=bodyText.split(/\\n+/).map(function(x){return (x||'').trim();}).filter(Boolean),firstName=null;" +
-            " var esc=-1;for(var li=0;li<lines.length;li++){if(norm(lines[li]).toUpperCase().indexOf('ESCALA DE TRABALHO')>=0){esc=li;break;}}" +
-            " if(esc>=0){" +
-            "  var parts=[];" +
-            "  for(var z=esc-1;z>=Math.max(0,esc-8);z--){" +
-            "   var cand=lines[z],nc=norm(cand).toUpperCase();" +
-            "   if(/^[A-ZÀ-Ú][A-ZÀ-Ú ]{1,60}$/.test(cand)&&!/(MARCA|PONTO|COMPROVANTE|PERIODO|ENTITIES|DEPENDENCIES|ESCALA|ATUALIZACAO)/.test(nc)){parts.unshift(cand);}" +
-            "   else if(parts.length)break;" +
-            "  }" +
-            "  if(parts.length)firstName=parts[0].split(/\\s+/)[0];" +
+            " function isNameLine(v){" +
+            "  var c=(v||'').trim(),nc=norm(c).toUpperCase();" +
+            "  if(!c||c.length>70||/[0-9:]/.test(c))return false;" +
+            "  if(!/^[A-Za-zÀ-ÿ'’-]+(?:\\s+[A-Za-zÀ-ÿ'’-]+){0,5}$/.test(c))return false;" +
+            "  if(c!==c.toUpperCase())return false;" +
+            "  if(/MARCA|PONTO|COMPROVANTE|PERIODO|ESCALA|TRABALHO|ULTIMA|ATUALIZACAO|AMERICANA|EMPRESA|FILIAL|COLABORADOR|ENTITIES|DEPENDENCIES/.test(nc))return false;" +
+            "  return true;" +
             " }" +
+            " function extractFirstName(txt){" +
+            "  var ls=(txt||'').split(/\\n+/).map(function(x){return (x||'').trim();}).filter(Boolean);" +
+            "  var esc=-1;for(var li=0;li<ls.length;li++){if(norm(ls[li]).toUpperCase().indexOf('ESCALA DE TRABALHO')>=0){esc=li;break;}}" +
+            "  if(esc>=0){" +
+            "   var parts=[];" +
+            "   for(var z=esc-1;z>=Math.max(0,esc-12);z--){" +
+            "    var cand=ls[z];" +
+            "    if(isNameLine(cand)){parts.unshift(cand);}" +
+            "    else if(parts.length){break;}" +
+            "   }" +
+            "   if(parts.length)return parts[0].split(/\\s+/)[0];" +
+            "  }" +
+            "  var m=(txt||'').match(/((?:[A-ZÀ-Ú'’-]{2,}(?:[ \\t]+[A-ZÀ-Ú'’-]{2,})*[ \\t]*\\n+){1,5})[ \\t]*ESCALA DE TRABALHO/i);" +
+            "  if(m&&m[1]){" +
+            "   var ns=m[1].split(/\\n+/).map(function(x){return (x||'').trim();}).filter(isNameLine);" +
+            "   if(ns.length)return ns[0].split(/\\s+/)[0];" +
+            "  }" +
+            "  return null;" +
+            " }" +
+            " var firstName=extractFirstName(bodyText);" +
             " var todayBlock=findTodayBlock(d,today,todayShort),times=[],evidence=[];" +
             " if(todayBlock){" +
             "  var todays=timeMatches(todayBlock);" +
@@ -219,6 +237,8 @@ public class MainActivity extends Activity {
         if (Build.VERSION.SDK_INT >= 33 &&
                 checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 1042);
+        } else {
+            handler.postDelayed(this::ensureExactAlarmPermission, 700);
         }
 
         root = new FrameLayout(this);
@@ -533,6 +553,33 @@ public class MainActivity extends Activity {
         });
     }
 
+    private void ensureExactAlarmPermission() {
+        if (Build.VERSION.SDK_INT < 31) return;
+
+        AlarmManager alarmManager = (AlarmManager) getSystemService(ALARM_SERVICE);
+        if (alarmManager == null || alarmManager.canScheduleExactAlarms()) return;
+
+        try {
+            Intent intent = new Intent(
+                    Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
+                    Uri.parse("package:" + getPackageName())
+            );
+            startActivity(intent);
+        } catch (Exception ignored) {}
+    }
+
+    @Override
+    public void onRequestPermissionsResult(
+            int requestCode,
+            String[] permissions,
+            int[] grantResults
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == 1042) {
+            handler.postDelayed(this::ensureExactAlarmPermission, 500);
+        }
+    }
+
     private void scheduleNativeReturnAlarms(String returnTime) {
         try {
             String[] parts = returnTime.split(":");
@@ -576,6 +623,10 @@ public class MainActivity extends Activity {
     private void scheduleOneReturnAlarm(long triggerAtMillis, int requestCode, String title, String message) {
         AlarmManager alarmManager = (AlarmManager) getSystemService(ALARM_SERVICE);
         if (alarmManager == null) return;
+
+        if (Build.VERSION.SDK_INT >= 31 && !alarmManager.canScheduleExactAlarms()) {
+            ensureExactAlarmPermission();
+        }
 
         Intent intent = new Intent(this, ReturnAlarmReceiver.class);
         intent.putExtra("notification_id", requestCode);
