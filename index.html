@@ -350,10 +350,10 @@
         </div>
       </div>
 
-      <button class="main-action" onclick="startLunchNow()">
+      <button class="main-action" onclick="goView('home')">
         <div>
-          <strong id="mainActionTitle">Registrar saída para almoço</strong>
-          <span id="mainActionSub">Usar o horário atual e calcular +1h12</span>
+          <strong id="mainActionTitle">Saída prevista do trabalho</strong>
+          <span id="mainActionSub">Prevista para --:-- • entrada prevista --:--</span>
         </div>
         <div class="arrow">›</div>
       </button>
@@ -845,7 +845,17 @@
     notifyEnabled = localStorage.getItem('notifyEnabled') !== '0';
     document.getElementById('notifyToggle').classList.toggle('on',notifyEnabled);
 
-    const ativo = JSON.parse(localStorage.getItem('almocoAtivo') || 'null');
+    // Ao abrir em um novo dia, nunca reaproveita batidas/intervalo do dia anterior.
+    const hoje = new Date().toLocaleDateString('pt-BR');
+    let ativo = JSON.parse(localStorage.getItem('almocoAtivo') || 'null');
+    if(ativo && ativo.data){
+      const dataAtivo = new Date(ativo.data);
+      if(Number.isNaN(dataAtivo.getTime()) || dataAtivo.toLocaleDateString('pt-BR') !== hoje){
+        localStorage.removeItem('almocoAtivo');
+        ativo = null;
+      }
+    }
+
     if(ativo){
       document.getElementById('exitTime').value = ativo.saida;
       document.getElementById('lunchOutBig').textContent = ativo.saida;
@@ -859,7 +869,6 @@
       document.getElementById('sumReturn').textContent = ativo.retorno;
       document.getElementById('workState').textContent = 'EM INTERVALO';
       document.getElementById('clockMeta').innerHTML = 'Saída ' + ativo.saida + '<br>Retorno previsto ' + ativo.retorno;
-      // A ação principal será atualizada pelas marcações da Senior com a previsão de saída do trabalho.
 
       const rp = ativo.retorno.split(':').map(Number);
       ultimoRetornoHora = rp[0];
@@ -867,10 +876,12 @@
     }
 
     const hist = JSON.parse(localStorage.getItem('historicoAlmoco') || '[]');
-    if(hist.length){
+    if(hist.length && hist[0].data === hoje){
       document.getElementById('sumLunchOut').textContent = hist[0].saida || '--:--';
       document.getElementById('sumReturn').textContent = hist[0].retorno || '--:--';
     }
+
+    updateScheduledWorkCard();
 
     mostrarHistorico();
     atualizarEstatisticas();
@@ -907,17 +918,20 @@
       const data = typeof raw === 'string' ? JSON.parse(raw) : raw;
       if(!data) return;
 
+      // Nome e escala são úteis mesmo antes da primeira batida do dia.
+      applySeniorIdentityAndSchedule(data);
+
       if(!data.ok){
         seniorConnected = data.loggedIn !== false;
         if(data.loggedIn === false){
           setSeniorVisual('disconnected','Toque aqui para abrir a Senior e fazer login.');
         } else {
           setSeniorVisual('connected',data.message || 'Senior aberta • aguardando os comprovantes.');
+          // Sem marcações ainda: limpa valores de ontem e mostra somente a escala prevista.
+          applySeniorEvents([]);
         }
         return;
       }
-
-      applySeniorIdentityAndSchedule(data);
 
       const times = Array.isArray(data.times) ? data.times : [];
       const events = times.map(function(time,index){
@@ -1140,25 +1154,23 @@
     return pad(Math.floor(total / 60)) + ':' + pad(total % 60);
   }
 
-  function calculateExpectedWorkEnd(firstClocking){
-    const first = minutesFromTime(firstClocking);
-    if(first === null) return null;
+  function getExpectedSchedule(){
+    const start = localStorage.getItem('seniorScheduleStart') || '08:00';
+    const end = localStorage.getItem('seniorScheduleEnd') || '18:00';
+    return {start:start,end:end};
+  }
 
-    const scheduleStart = localStorage.getItem('seniorScheduleStart');
-    const scheduleEnd = localStorage.getItem('seniorScheduleEnd');
-    const startMin = minutesFromTime(scheduleStart);
-    const endMin = minutesFromTime(scheduleEnd);
+  function calculateExpectedWorkEnd(){
+    // A previsão vem da escala oficial da Senior, não da hora em que a pessoa bateu o ponto.
+    return getExpectedSchedule().end;
+  }
 
-    let span = null;
-    if(startMin !== null && endMin !== null){
-      span = endMin - startMin;
-      if(span <= 0) span += 24 * 60;
-    }
-
-    // Fallback da jornada atual: 08:00 às 18:00 = 10 horas de permanência.
-    if(span === null || span < 60 || span > 16 * 60) span = 10 * 60;
-
-    return timeFromMinutes(first + span);
+  function updateScheduledWorkCard(){
+    const schedule = getExpectedSchedule();
+    document.getElementById('mainActionTitle').textContent = 'Saída prevista do trabalho';
+    document.getElementById('mainActionSub').textContent =
+      'Prevista para ' + schedule.end + ' • entrada prevista ' + schedule.start;
+    document.querySelector('.main-action').onclick = function(){ goView('home'); };
   }
 
   function applySeniorIdentityAndSchedule(data){
@@ -1180,6 +1192,9 @@
 
     if(data && data.scheduleStart) localStorage.setItem('seniorScheduleStart', data.scheduleStart);
     if(data && data.scheduleEnd) localStorage.setItem('seniorScheduleEnd', data.scheduleEnd);
+    if(data && data.scheduleBreak) localStorage.setItem('seniorScheduleBreak', data.scheduleBreak);
+
+    updateScheduledWorkCard();
   }
 
   function applySeniorEvents(events){
@@ -1189,7 +1204,9 @@
     const lunchOut = times[1] || null;
     const lunchReturn = times[2] || null;
     const exit = times[3] || null;
-    const expectedWorkEnd = entry ? calculateExpectedWorkEnd(entry) : null;
+    const schedule = getExpectedSchedule();
+    const expectedWorkStart = schedule.start;
+    const expectedWorkEnd = calculateExpectedWorkEnd();
 
     document.getElementById('sumEntry').textContent = entry || '--:--';
     document.getElementById('sumLunchOut').textContent = lunchOut || '--:--';
@@ -1209,11 +1226,12 @@
     // O relógio central não exibe mais a hora atual.
     document.getElementById('currentTime').textContent = '--:--';
 
-    if(entry && expectedWorkEnd){
-      document.getElementById('mainActionTitle').textContent = 'Saída prevista do trabalho';
-      document.getElementById('mainActionSub').textContent =
-        'Prevista para ' + expectedWorkEnd + ' • entrada ' + entry;
-      document.querySelector('.main-action').onclick = function(){ goView('home'); };
+    updateScheduledWorkCard();
+
+    if(!entry){
+      document.getElementById('workState').textContent = 'AGUARDANDO ENTRADA';
+      document.getElementById('clockMeta').innerHTML =
+        'Entrada prevista ' + expectedWorkStart + '<br>Saída prevista ' + expectedWorkEnd;
     }
 
     if(entry && !lunchOut){
