@@ -259,6 +259,44 @@
       .app{border-radius:30px;min-height:calc(100vh - 36px)}
       .bottom-nav{bottom:18px;border-radius:0 0 30px 30px}
     }
+  
+    .sync-card{cursor:pointer}
+    .dot.connected{background:#16c784;box-shadow:0 0 0 5px #e6fbf2}
+    .dot.error{background:#ef4444;box-shadow:0 0 0 5px #feeceb}
+    .modal-backdrop{
+      position:fixed;inset:0;background:rgba(3,12,22,.64);backdrop-filter:blur(8px);
+      z-index:60;display:none;align-items:flex-end;justify-content:center;padding:18px
+    }
+    .modal-backdrop.show{display:flex}
+    .modal-card{
+      width:min(100%,500px);background:#fff;border-radius:26px;padding:20px;
+      box-shadow:0 30px 80px rgba(0,0,0,.35);max-height:88vh;overflow:auto
+    }
+    .modal-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}
+    .modal-title{font-size:20px;font-weight:950;letter-spacing:-.4px}
+    .modal-sub{font-size:12px;color:var(--muted);line-height:1.5;margin-top:5px}
+    .modal-close{border:0;background:#eef2f6;width:38px;height:38px;border-radius:13px;font-size:18px}
+    .field{margin-top:15px}
+    .field label{display:block;font-size:11.5px;font-weight:850;color:#334155;margin-bottom:7px}
+    .field input{
+      width:100%;border:1px solid #d7e0e9;background:#fff;border-radius:14px;padding:14px 13px;
+      outline:none;font-size:15px;color:#0f172a
+    }
+    .field input:focus{border-color:#ff8a1f;box-shadow:0 0 0 3px rgba(255,122,0,.10)}
+    .privacy-note{
+      margin-top:13px;padding:12px 13px;border-radius:14px;background:#f7fafc;color:#64748b;
+      font-size:11.5px;line-height:1.45;border:1px solid #edf1f5
+    }
+    .senior-status{
+      margin-top:13px;padding:12px 13px;border-radius:14px;background:#f8fafc;border:1px solid #edf1f5;
+      font-size:12px;line-height:1.45;display:none
+    }
+    .senior-status.show{display:block}
+    .senior-status.ok{background:#edfff6;border-color:#c9f2df;color:#0d6f49}
+    .senior-status.bad{background:#fff2f1;border-color:#ffd3cf;color:#b42318}
+    .modal-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+    .modal-actions .btn{margin-top:0}
+
   </style>
 </head>
 <body>
@@ -285,7 +323,7 @@
         <div class="date-small" id="todayText">--</div>
       </div>
 
-      <div class="sync-card">
+      <div class="sync-card" onclick="handleSeniorCard()">
         <div class="sync-left">
           <div class="dot" id="seniorDot"></div>
           <div>
@@ -490,9 +528,45 @@
         <span class="pill">Ativo</span>
       </div>
 
-      <button class="btn btn-outline" onclick="showToast('A conexão segura com a Senior será ativada na próxima etapa.')">Configurar Senior</button>
+      <button class="btn btn-outline" onclick="openSeniorModal()">Configurar Senior</button>
     </div>
   </section>
+
+
+  <div id="seniorModal" class="modal-backdrop" onclick="closeSeniorModal(event)">
+    <div class="modal-card" onclick="event.stopPropagation()">
+      <div class="modal-head">
+        <div>
+          <div class="modal-title">Conectar à Senior</div>
+          <div class="modal-sub">Use o mesmo usuário e senha que você usa para entrar na plataforma Senior X.</div>
+        </div>
+        <button class="modal-close" onclick="closeSeniorModal()">✕</button>
+      </div>
+
+      <div class="field">
+        <label for="seniorUsername">Usuário da Senior</label>
+        <input id="seniorUsername" type="text" autocomplete="username" autocapitalize="none" placeholder="Seu usuário">
+      </div>
+
+      <div class="field">
+        <label for="seniorPassword">Senha</label>
+        <input id="seniorPassword" type="password" autocomplete="current-password" placeholder="Sua senha">
+      </div>
+
+      <div class="privacy-note">
+        🔒 Sua senha é enviada por HTTPS diretamente ao nosso backend para autenticar na Senior e não é salva no navegador nem no GitHub. Depois do login, o app mantém apenas uma sessão criptografada em cookie HTTP-only.
+      </div>
+
+      <div id="seniorModalStatus" class="senior-status"></div>
+
+      <button id="seniorLoginBtn" class="btn btn-orange" onclick="connectSenior()">Conectar Senior</button>
+
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="syncSeniorClockings(true)">Atualizar marcações</button>
+        <button class="btn btn-danger" onclick="disconnectSenior()">Desconectar</button>
+      </div>
+    </div>
+  </div>
 
   <nav class="bottom-nav">
     <button id="nav-home" class="nav-item active" onclick="goView('home')">
@@ -605,7 +679,7 @@
     atualizarProgresso();
     showToast('Retorno calculado para ' + retorno + '.');
 
-    if(notifyEnabled) adicionarAlarme(true);
+    if(notifyEnabled) scheduleReturnNotification(retorno);
   }
 
   function atualizarProgresso(){
@@ -795,9 +869,306 @@
     atualizarProgresso();
   }
 
+
+  const SENIOR_POLL_MS = 60000;
+  let seniorConnected = false;
+  let seniorPollTimer = null;
+  let returnNotificationTimer = null;
+
+  function openSeniorModal(){
+    document.getElementById('seniorModal').classList.add('show');
+    document.getElementById('seniorPassword').value = '';
+    setTimeout(function(){ document.getElementById('seniorUsername').focus(); },120);
+  }
+
+  function closeSeniorModal(event){
+    if(event && event.target !== document.getElementById('seniorModal')) return;
+    document.getElementById('seniorModal').classList.remove('show');
+  }
+
+  function setSeniorModalStatus(message,type){
+    const el = document.getElementById('seniorModalStatus');
+    el.textContent = message || '';
+    el.className = 'senior-status' + (message ? ' show ' + (type || '') : '');
+  }
+
+  function setSeniorVisual(state,message){
+    const dot = document.getElementById('seniorDot');
+    const title = document.getElementById('seniorTitle');
+    const sub = document.getElementById('seniorSub');
+
+    dot.classList.remove('connected','error');
+
+    if(state === 'connected'){
+      dot.classList.add('connected');
+      title.textContent = 'Conectado à Senior';
+      sub.textContent = message || 'Suas marcações estão sendo sincronizadas automaticamente.';
+      seniorConnected = true;
+    } else if(state === 'error'){
+      dot.classList.add('error');
+      title.textContent = 'Senior precisa de atenção';
+      sub.textContent = message || 'Toque aqui para reconectar.';
+      seniorConnected = false;
+    } else {
+      title.textContent = 'Senior • toque para conectar';
+      sub.textContent = message || 'Conecte sua conta para buscar suas marcações automaticamente.';
+      seniorConnected = false;
+    }
+
+    const pills = document.querySelectorAll('.pill.amber');
+    pills.forEach(function(p){
+      if(p.closest('.setting-row') && p.closest('.setting-row').textContent.includes('Integração Senior')){
+        p.textContent = state === 'connected' ? 'Conectado' : (state === 'error' ? 'Atenção' : 'Desconectado');
+        p.style.background = state === 'connected' ? '#e9fff4' : '';
+        p.style.color = state === 'connected' ? '#0d6f49' : '';
+      }
+    });
+  }
+
+  function handleSeniorCard(){
+    if(seniorConnected){
+      syncSeniorClockings(true);
+    } else {
+      openSeniorModal();
+    }
+  }
+
+  async function connectSenior(){
+    const username = document.getElementById('seniorUsername').value.trim();
+    const password = document.getElementById('seniorPassword').value;
+    const btn = document.getElementById('seniorLoginBtn');
+
+    if(!username || !password){
+      setSeniorModalStatus('Informe seu usuário e sua senha da Senior.','bad');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Conectando...';
+    setSeniorModalStatus('Autenticando com a Senior...','');
+
+    try{
+      const response = await fetch('/api/senior-login',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        credentials:'same-origin',
+        body:JSON.stringify({username:username,password:password})
+      });
+      const data = await response.json().catch(function(){ return {}; });
+
+      if(!response.ok || !data.ok){
+        throw new Error(data.error || 'Não foi possível conectar.');
+      }
+
+      document.getElementById('seniorPassword').value = '';
+      localStorage.setItem('seniorUsernameHint',username);
+      setSeniorModalStatus('Conectado. Buscando suas marcações...','ok');
+      setSeniorVisual('connected','Buscando suas marcações agora.');
+      await syncSeniorClockings(false);
+      startSeniorPolling();
+
+      setTimeout(function(){ closeSeniorModal(); },700);
+    }catch(error){
+      setSeniorVisual('error',error.message);
+      setSeniorModalStatus(error.message,'bad');
+    }finally{
+      btn.disabled = false;
+      btn.textContent = 'Conectar Senior';
+    }
+  }
+
+  async function disconnectSenior(){
+    try{
+      await fetch('/api/senior-logout',{method:'POST',credentials:'same-origin'});
+    }catch(_){}
+    stopSeniorPolling();
+    seniorConnected = false;
+    setSeniorVisual('disconnected','Toque aqui para conectar novamente.');
+    setSeniorModalStatus('Conta desconectada deste aparelho.','');
+    showToast('Senior desconectada.');
+  }
+
+  function calcReturnFromTime(saida){
+    const p = saida.split(':').map(Number);
+    if(p.length < 2 || Number.isNaN(p[0]) || Number.isNaN(p[1])) return null;
+    let total = (p[0]*60+p[1]+INTERVALO_MINUTOS)%(24*60);
+    return pad(Math.floor(total/60))+':'+pad(total%60);
+  }
+
+  function registerSeniorLunch(saida){
+    const retorno = calcReturnFromTime(saida);
+    if(!retorno) return;
+
+    const current = JSON.parse(localStorage.getItem('almocoAtivo') || 'null');
+    const today = new Date().toLocaleDateString('pt-BR');
+
+    if(current && current.saida === saida){
+      return;
+    }
+
+    localStorage.setItem('almocoAtivo',JSON.stringify({
+      saida:saida,
+      retorno:retorno,
+      data:new Date().toISOString(),
+      origem:'Senior'
+    }));
+
+    document.getElementById('exitTime').value = saida;
+    document.getElementById('lunchOutBig').textContent = saida;
+    document.getElementById('returnTime').textContent = retorno;
+    document.getElementById('progressStart').textContent = saida;
+    document.getElementById('progressEnd').textContent = retorno;
+    document.getElementById('progressCard').style.display = 'block';
+    document.getElementById('lunchHeroTitle').textContent = 'Almoço detectado pela Senior!';
+    document.getElementById('lunchHeroText').textContent = 'Sua saída foi reconhecida automaticamente e o retorno foi calculado em +1h12.';
+    document.getElementById('sumLunchOut').textContent = saida;
+    document.getElementById('sumReturn').textContent = retorno;
+    document.getElementById('workState').textContent = 'EM INTERVALO';
+    document.getElementById('clockMeta').innerHTML = 'Saída Senior ' + saida + '<br>Retorno previsto ' + retorno;
+    document.getElementById('mainActionTitle').textContent = 'Acompanhar intervalo';
+    document.getElementById('mainActionSub').textContent = 'Retorno previsto às ' + retorno;
+    document.querySelector('.main-action').onclick = function(){ goView('lunch'); };
+
+    const rp = retorno.split(':').map(Number);
+    ultimoRetornoHora = rp[0];
+    ultimoRetornoMinuto = rp[1];
+
+    salvarHistorico(saida,retorno);
+    atualizarProgresso();
+    if(notifyEnabled) scheduleReturnNotification(retorno);
+
+    showToast('Senior detectou sua saída às ' + saida + '. Retorno: ' + retorno + '.');
+  }
+
+  function applySeniorEvents(events){
+    const times = (events || []).map(function(e){ return e.time; }).filter(Boolean);
+
+    document.getElementById('sumEntry').textContent = times[0] || '--:--';
+    document.getElementById('sumLunchOut').textContent = times[1] || '--:--';
+
+    if(times[2]){
+      document.getElementById('sumReturn').textContent = times[2];
+    } else if(times[1]){
+      document.getElementById('sumReturn').textContent = calcReturnFromTime(times[1]) || '--:--';
+    } else {
+      document.getElementById('sumReturn').textContent = '--:--';
+    }
+
+    document.getElementById('sumExit').textContent = times[3] || '--:--';
+
+    if(times[1]) registerSeniorLunch(times[1]);
+
+    if(times[2]){
+      document.getElementById('workState').textContent = 'EM TRABALHO';
+      document.getElementById('clockMeta').innerHTML = 'Retorno registrado ' + times[2] + '<br>pela Senior';
+      localStorage.removeItem('almocoAtivo');
+    }
+
+    if(times[3]){
+      document.getElementById('workState').textContent = 'JORNADA ENCERRADA';
+      document.getElementById('clockMeta').innerHTML = 'Última marcação ' + times[3] + '<br>Saída registrada na Senior';
+    }
+
+    return times;
+  }
+
+  async function syncSeniorClockings(showFeedback){
+    try{
+      const response = await fetch('/api/senior-clockings',{
+        method:'GET',
+        cache:'no-store',
+        credentials:'same-origin'
+      });
+      const data = await response.json().catch(function(){ return {}; });
+
+      if(response.status === 401){
+        stopSeniorPolling();
+        setSeniorVisual('disconnected',data.error || 'Toque para conectar sua conta.');
+        if(showFeedback) openSeniorModal();
+        return false;
+      }
+
+      if(!response.ok || !data.ok){
+        setSeniorVisual('error',data.error || 'Não foi possível ler suas marcações.');
+        if(showFeedback){
+          setSeniorModalStatus(data.error || 'Não foi possível ler suas marcações.','bad');
+          openSeniorModal();
+        }
+        return false;
+      }
+
+      setSeniorVisual('connected',
+        data.eventCount
+          ? data.eventCount + (data.eventCount === 1 ? ' marcação encontrada hoje.' : ' marcações encontradas hoje.')
+          : 'Conectado. Aguardando sua primeira marcação de hoje.'
+      );
+
+      const times = applySeniorEvents(data.events || []);
+      if(showFeedback){
+        showToast(times.length ? 'Marcações atualizadas pela Senior.' : 'Conectado à Senior. Nenhuma marcação hoje ainda.');
+      }
+      return true;
+    }catch(error){
+      setSeniorVisual('error','Falha temporária ao consultar a Senior.');
+      if(showFeedback) showToast('Não foi possível atualizar a Senior agora.');
+      return false;
+    }
+  }
+
+  function startSeniorPolling(){
+    stopSeniorPolling();
+    seniorPollTimer = setInterval(function(){ syncSeniorClockings(false); },SENIOR_POLL_MS);
+  }
+
+  function stopSeniorPolling(){
+    if(seniorPollTimer) clearInterval(seniorPollTimer);
+    seniorPollTimer = null;
+  }
+
+  function scheduleReturnNotification(returnTime){
+    if(returnNotificationTimer) clearTimeout(returnNotificationTimer);
+    if(!notifyEnabled || !('Notification' in window) || Notification.permission !== 'granted') return;
+
+    const now = new Date();
+    const p = returnTime.split(':').map(Number);
+    const when = new Date(now);
+    when.setHours(p[0],p[1],0,0);
+    if(when <= now) when.setDate(when.getDate()+1);
+
+    const delay = when - now;
+    if(delay > 24*60*60*1000) return;
+
+    returnNotificationTimer = setTimeout(function(){
+      try{
+        new Notification('Hora do Almoço',{
+          body:'Seu intervalo terminou. Retorno previsto: ' + returnTime
+        });
+      }catch(_){}
+    },delay);
+  }
+
+  const originalToggleNotify = toggleNotify;
+  toggleNotify = function(){
+    notifyEnabled = !notifyEnabled;
+    document.getElementById('notifyToggle').classList.toggle('on',notifyEnabled);
+    localStorage.setItem('notifyEnabled',notifyEnabled ? '1' : '0');
+
+    if(notifyEnabled && 'Notification' in window && Notification.permission === 'default'){
+      Notification.requestPermission().catch(function(){});
+    }
+  };
+
+  async function initSenior(){
+    const hint = localStorage.getItem('seniorUsernameHint');
+    if(hint) document.getElementById('seniorUsername').value = hint;
+    const ok = await syncSeniorClockings(false);
+    if(ok) startSeniorPolling();
+  }
+
   setInterval(atualizarRelogio,1000);
   atualizarRelogio();
   restaurarEstado();
+  initSenior();
 </script>
 </body>
 </html>
