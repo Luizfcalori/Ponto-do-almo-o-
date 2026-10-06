@@ -876,11 +876,71 @@
 
 
   const SENIOR_POLL_MS = 60000;
+
+  function hasNativeSeniorBridge(){
+    return !!(window.AndroidSenior && typeof window.AndroidSenior.syncNow === 'function');
+  }
+
+  window.receiveSeniorStatus = function(raw){
+    try{
+      const data = typeof raw === 'string' ? JSON.parse(raw) : raw;
+      if(!data) return;
+
+      if(data.state === 'login_required'){
+        setSeniorVisual('disconnected','Toque aqui para abrir a Senior e entrar na sua conta.');
+      } else if(data.state === 'loading'){
+        setSeniorVisual('connected','Abrindo seus comprovantes na Senior...');
+      } else if(data.state === 'ready'){
+        setSeniorVisual('connected',data.message || 'Senior pronta para leitura das suas marcações.');
+      } else if(data.state === 'error'){
+        seniorConnected = true;
+        setSeniorVisual('connected',data.message || 'Login ativo • não consegui ler os comprovantes agora.');
+      }
+    }catch(_){}
+  };
+
+  window.receiveSeniorClockings = function(raw){
+    try{
+      const data = typeof raw === 'string' ? JSON.parse(raw) : raw;
+      if(!data) return;
+
+      if(!data.ok){
+        seniorConnected = data.loggedIn !== false;
+        if(data.loggedIn === false){
+          setSeniorVisual('disconnected','Toque aqui para abrir a Senior e fazer login.');
+        } else {
+          setSeniorVisual('connected',data.message || 'Senior aberta • aguardando os comprovantes.');
+        }
+        return;
+      }
+
+      const times = Array.isArray(data.times) ? data.times : [];
+      const events = times.map(function(time,index){
+        return {id:'native-' + index,time:time,day:data.day || '',origin:'Senior WebView'};
+      });
+
+      seniorConnected = true;
+      localStorage.setItem('seniorSessionKnown','1');
+      setSeniorVisual('connected',
+        times.length
+          ? times.length + (times.length === 1 ? ' marcação lida nos comprovantes.' : ' marcações lidas nos comprovantes.')
+          : 'Conectado à Senior. Nenhuma marcação encontrada hoje.'
+      );
+      applySeniorEvents(events);
+      if(times.length) showToast('Marcações atualizadas pela tela da Senior.');
+    }catch(error){
+      setSeniorVisual('connected','Senior conectada • falha ao interpretar os comprovantes.');
+    }
+  };
   let seniorConnected = false;
   let seniorPollTimer = null;
   let returnNotificationTimer = null;
 
   function openSeniorModal(){
+    if(hasNativeSeniorBridge()){
+      window.AndroidSenior.openReceipts();
+      return;
+    }
     document.getElementById('seniorModal').classList.add('show');
     document.getElementById('seniorPassword').value = '';
     setTimeout(function(){ document.getElementById('seniorUsername').focus(); },120);
@@ -931,6 +991,10 @@
   }
 
   function handleSeniorCard(){
+    if(hasNativeSeniorBridge()){
+      window.AndroidSenior.openReceipts();
+      return;
+    }
     if(seniorConnected){
       syncSeniorClockings(true);
     } else {
@@ -939,6 +1003,10 @@
   }
 
   async function connectSenior(){
+    if(hasNativeSeniorBridge()){
+      window.AndroidSenior.openReceipts();
+      return;
+    }
     const username = document.getElementById('seniorUsername').value.trim();
     const password = document.getElementById('seniorPassword').value;
     const btn = document.getElementById('seniorLoginBtn');
@@ -984,6 +1052,14 @@
   }
 
   async function disconnectSenior(){
+    if(hasNativeSeniorBridge()){
+      if(typeof window.AndroidSenior.clearSession === 'function') window.AndroidSenior.clearSession();
+      localStorage.removeItem('seniorSessionKnown');
+      seniorConnected = false;
+      setSeniorVisual('disconnected','Sessão da Senior removida deste app.');
+      closeSeniorModal();
+      return;
+    }
     try{
       await fetch('/api/senior-logout',{method:'POST',credentials:'same-origin'});
     }catch(_){}
@@ -1080,6 +1156,12 @@
   }
 
   async function syncSeniorClockings(showFeedback){
+    if(hasNativeSeniorBridge()){
+      setSeniorVisual('connected','Lendo seus comprovantes pela Senior...');
+      window.AndroidSenior.syncNow();
+      if(showFeedback) showToast('Atualizando marcações pela Senior...');
+      return true;
+    }
     try{
       const response = await fetch('/api/senior-clockings',{
         method:'GET',
@@ -1181,6 +1263,15 @@
   };
 
   async function initSenior(){
+    if(hasNativeSeniorBridge()){
+      setSeniorVisual('connected','Validando a sessão da Senior no aplicativo...');
+      window.AndroidSenior.syncNow();
+      stopSeniorPolling();
+      seniorPollTimer = setInterval(function(){
+        if(document.visibilityState === 'visible') window.AndroidSenior.syncNow();
+      },SENIOR_POLL_MS);
+      return;
+    }
     const hint = localStorage.getItem('seniorUsernameHint');
     if(hint) document.getElementById('seniorUsername').value = hint;
     if(localStorage.getItem('seniorSessionKnown') === '1'){
