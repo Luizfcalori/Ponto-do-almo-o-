@@ -1,14 +1,19 @@
-name: Build Hora do Almoço Android
+name: Build e publicar Hora do Almoço Android
 
 on:
   workflow_dispatch:
+    inputs:
+      publish_release:
+        description: "Publicar APK no canal estável"
+        required: true
+        default: true
+        type: boolean
   push:
-    paths:
-      - "android/**"
-      - ".github/workflows/build-android.yml"
+    tags:
+      - "v*"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -16,10 +21,16 @@ jobs:
     env:
       ANDROID_HOME: /usr/local/lib/android/sdk
       ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+      KEYSTORE_B64: ${{ secrets.HORA_ALMOCO_KEYSTORE_B64 }}
+      KEYSTORE_PASSWORD: ${{ secrets.HORA_ALMOCO_KEYSTORE_PASSWORD }}
+      KEY_ALIAS: ${{ secrets.HORA_ALMOCO_KEY_ALIAS }}
+      KEY_PASSWORD: ${{ secrets.HORA_ALMOCO_KEY_PASSWORD }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -34,7 +45,6 @@ jobs:
           if [ ! -x "$SDKMANAGER" ]; then
             SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -path "*/bin/sdkmanager" | sort | tail -n 1)"
           fi
-          echo "sdkmanager: $SDKMANAGER"
           yes | "$SDKMANAGER" --licenses >/dev/null || true
           "$SDKMANAGER" "platforms;android-35" "build-tools;35.0.0"
 
@@ -43,18 +53,123 @@ jobs:
         with:
           gradle-version: "8.9"
 
-      - name: Build APK
-        working-directory: android
-        run: gradle :app:assembleDebug --stacktrace
-
-      - name: Rename APK
+      - name: Read app version
+        id: version
+        shell: bash
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk Hora-do-Almoco-Senior.apk
+          VERSION_NAME="$(sed -n 's/.*versionName "\([^"]*\)".*/\1/p' android/app/build.gradle | head -n 1)"
+          VERSION_CODE="$(sed -n 's/.*versionCode \([0-9][0-9]*\).*/\1/p' android/app/build.gradle | head -n 1)"
 
-      - name: Upload APK
+          if [ -z "$VERSION_NAME" ] || [ -z "$VERSION_CODE" ]; then
+            echo "Não foi possível ler versionName/versionCode."
+            exit 1
+          fi
+
+          if [ "$GITHUB_REF_TYPE" = "tag" ] && [ "$GITHUB_REF_NAME" != "v$VERSION_NAME" ]; then
+            echo "A tag $GITHUB_REF_NAME não corresponde ao versionName $VERSION_NAME."
+            exit 1
+          fi
+
+          echo "name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
+          echo "code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
+
+      - name: Validate stable signing
+        shell: bash
+        run: |
+          missing=0
+          for name in KEYSTORE_B64 KEYSTORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
+            if [ -z "${!name}" ]; then
+              echo "Secret ausente: $name"
+              missing=1
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            echo "Configure os quatro secrets HORA_ALMOCO_* antes de publicar."
+            exit 1
+          fi
+
+      - name: Restore stable keystore
+        shell: bash
+        run: |
+          printf '%s' "$KEYSTORE_B64" | base64 --decode > "$RUNNER_TEMP/hora-do-almoco.jks"
+          keytool -list -keystore "$RUNNER_TEMP/hora-do-almoco.jks" -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" >/dev/null
+
+      - name: Build signed release APK
+        working-directory: android
+        shell: bash
+        run: |
+          gradle :app:assembleRelease --stacktrace \
+            -Pandroid.injected.signing.store.file="$RUNNER_TEMP/hora-do-almoco.jks" \
+            -Pandroid.injected.signing.store.password="$KEYSTORE_PASSWORD" \
+            -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
+            -Pandroid.injected.signing.key.password="$KEY_PASSWORD"
+
+      - name: Prepare APK
+        shell: bash
+        run: |
+          cp android/app/build/outputs/apk/release/app-release.apk Hora-do-Almoco-Senior.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs Hora-do-Almoco-Senior.apk
+          sha256sum Hora-do-Almoco-Senior.apk > Hora-do-Almoco-Senior.apk.sha256
+
+      - name: Upload signed APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Hora-do-Almoco-Senior
-          path: Hora-do-Almoco-Senior.apk
+          name: Hora-do-Almoco-Senior-v${{ steps.version.outputs.name }}
+          path: |
+            Hora-do-Almoco-Senior.apk
+            Hora-do-Almoco-Senior.apk.sha256
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 90
+
+      - name: Publish stable GitHub Release
+        if: github.ref_type == 'tag' || inputs.publish_release == true
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION_NAME: ${{ steps.version.outputs.name }}
+        run: |
+          TAG="v$VERSION_NAME"
+          NOTES="APK estável do Hora do Almoço $VERSION_NAME, assinado com a chave fixa do aplicativo."
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" Hora-do-Almoco-Senior.apk Hora-do-Almoco-Senior.apk.sha256 --clobber
+            gh release edit "$TAG" --title "Hora do Almoço $VERSION_NAME" --notes "$NOTES"
+          else
+            gh release create "$TAG" Hora-do-Almoco-Senior.apk Hora-do-Almoco-Senior.apk.sha256 \
+              --target "$GITHUB_SHA" \
+              --title "Hora do Almoço $VERSION_NAME" \
+              --notes "$NOTES"
+          fi
+
+      - name: Update app updater channel
+        if: github.ref_type == 'tag' || inputs.publish_release == true
+        shell: bash
+        env:
+          VERSION_NAME: ${{ steps.version.outputs.name }}
+          VERSION_CODE: ${{ steps.version.outputs.code }}
+        run: |
+          TAG="v$VERSION_NAME"
+          APK_URL="https://github.com/Luizfcalori/Ponto-do-almo-o-/releases/download/$TAG/Hora-do-Almoco-Senior.apk"
+
+          git fetch origin main
+          git checkout main
+          git pull --ff-only origin main
+
+          jq -n \
+            --arg versionName "$VERSION_NAME" \
+            --argjson versionCode "$VERSION_CODE" \
+            --arg apkUrl "$APK_URL" \
+            --arg notes "Atualização estável do Hora do Almoço." \
+            '{versionName:$versionName,versionCode:$versionCode,apkUrl:$apkUrl,notes:$notes}' \
+            > app-update.json
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app-update.json
+
+          if git diff --cached --quiet; then
+            echo "Canal de atualização já está em v$VERSION_NAME."
+          else
+            git commit -m "Publish Android update channel v$VERSION_NAME"
+            git push origin main
+          fi
