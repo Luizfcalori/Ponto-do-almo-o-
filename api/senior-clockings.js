@@ -173,67 +173,10 @@ module.exports = async (req, res) => {
 
     const today = todaySaoPaulo();
 
-    // 1) Descobre exclusivamente o colaborador associado ao usuário autenticado.
-    const employeeResp = await seniorFetch(
-      '/queries/employeeByUserQuery',
-      session,
-      { method: 'GET' }
-    );
-
-    if (employeeResp.status === 401) {
-      return res.status(401).json({
-        ok: false,
-        connected: false,
-        error: 'A Senior pediu uma nova autenticação.',
-        step: 'employee'
-      });
-    }
-
-    if (employeeResp.status === 403) {
-      return res.status(403).json({
-        ok: false,
-        connected: true,
-        permissionDenied: true,
-        error: 'Seu login está ativo, mas a Senior não liberou a consulta do colaborador vinculado ao usuário.',
-        step: 'employee'
-      });
-    }
-
-    if (!employeeResp.ok) {
-      return res.status(502).json({
-        ok: false,
-        connected: true,
-        sessionHeld: true,
-        error: 'Seu login continua ativo, mas a Senior falhou ao identificar seu cadastro de colaborador.',
-        step: 'employee',
-        seniorStatus: employeeResp.status
-      });
-    }
-
-    const employee =
-      employeeResp.data?.employee ||
-      employeeResp.data?.result?.employee ||
-      null;
-
-    const employeeId =
-      employee?.id ||
-      employee?.uuid ||
-      employee?.employeeId ||
-      null;
-
-    if (!employeeId) {
-      return res.status(502).json({
-        ok: false,
-        connected: true,
-        sessionHeld: true,
-        error: 'O login foi mantido, mas a Senior não retornou o identificador do seu cadastro de colaborador.',
-        step: 'employee-id'
-      });
-    }
-
-    // 2) Consulta somente as marcações deste colaborador no dia atual.
-    const body = {
-      employeeId,
+    // Consulta feita para o próprio usuário autenticado.
+    // A Senior descreve clockingEventByActiveUserQuery como a rota que
+    // recupera as marcações do colaborador do usuário que fez a requisição.
+    const selfBody = {
       filter: {
         pageInfo: {
           pageSize: 250,
@@ -248,14 +191,55 @@ module.exports = async (req, res) => {
       }
     };
 
-    const clockResp = await seniorFetch(
-      '/queries/clockingEventBetweenPeriodByEmployeeQuery',
+    let clockResp = await seniorFetch(
+      '/queries/clockingEventByActiveUserQuery',
       session,
       {
         method: 'POST',
-        body: JSON.stringify(body)
+        body: JSON.stringify(selfBody)
       }
     );
+
+    // Fallback para instalações antigas da Senior que não tenham a consulta
+    // self-service habilitada, mas liberem a identificação do colaborador.
+    if (!clockResp.ok && clockResp.status !== 401) {
+      const employeeResp = await seniorFetch(
+        '/queries/employeeByUserQuery',
+        session,
+        { method: 'GET' }
+      );
+
+      const employee =
+        employeeResp.data?.employee ||
+        employeeResp.data?.result?.employee ||
+        null;
+
+      const employeeId =
+        employee?.id ||
+        employee?.uuid ||
+        employee?.employeeId ||
+        null;
+
+      if (employeeResp.ok && employeeId) {
+        const employeeBody = {
+          employeeId,
+          filter: selfBody.filter
+        };
+
+        const fallbackResp = await seniorFetch(
+          '/queries/clockingEventBetweenPeriodByEmployeeQuery',
+          session,
+          {
+            method: 'POST',
+            body: JSON.stringify(employeeBody)
+          }
+        );
+
+        if (fallbackResp.ok || fallbackResp.status === 401) {
+          clockResp = fallbackResp;
+        }
+      }
+    }
 
     if (clockResp.status === 401) {
       return res.status(401).json({
@@ -270,9 +254,10 @@ module.exports = async (req, res) => {
       return res.status(403).json({
         ok: false,
         connected: true,
+        sessionHeld: true,
         permissionDenied: true,
-        error: 'Seu login está ativo, mas a Senior não liberou a leitura das suas marcações por esta API.',
-        step: 'clockings'
+        error: 'Seu login continua ativo, mas a Senior bloqueou também a consulta de marcações do próprio usuário.',
+        step: 'active-user-clockings'
       });
     }
 
@@ -281,8 +266,8 @@ module.exports = async (req, res) => {
         ok: false,
         connected: true,
         sessionHeld: true,
-        error: 'Seu login continua ativo, mas a Senior não retornou suas marcações nesta consulta.',
-        step: 'clockings',
+        error: 'Seu login continua ativo, mas a Senior não retornou suas marcações nesta tentativa.',
+        step: 'active-user-clockings',
         seniorStatus: clockResp.status
       });
     }
@@ -299,7 +284,7 @@ module.exports = async (req, res) => {
       events: todayEvents,
       eventCount: todayEvents.length,
       scannedCount: events.length,
-      source: 'employee-clockings'
+      source: 'active-user-clockings'
     });
   } catch (error) {
     return res.status(401).json({
