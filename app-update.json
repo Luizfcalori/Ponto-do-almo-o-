@@ -1,0 +1,8 @@
+{
+  "versionCode": 9,
+  "versionName": "2.1.0",
+  "apkUrl": "https://hora-do-almoco-updates.vercel.app/Hora-do-Almoco.apk",
+  "sha256": "1d5fe1c2a1c36bb7ba154060bc96c1b6c5c9cd937ec7eb18b104400bb2a11101",
+  "mandatory": false,
+  "notes": "Canal estável com atualização pelo próprio aplicativo."
+}
