@@ -323,7 +323,7 @@
 
       <div class="greeting">
         <div>
-          <div class="greet-main" id="greetMain">Olá, Luiz! ☀️</div>
+          <div class="greet-main" id="greetMain">Olá! ☀️</div>
           <div class="greet-sub">Bom trabalho hoje!</div>
         </div>
         <div class="date-small" id="todayText">--</div>
@@ -863,7 +863,7 @@
   }
 
   function restaurarEstado(){
-    const savedFirstName = localStorage.getItem('seniorFirstName') || 'Luiz';
+    const savedFirstName = localStorage.getItem('seniorFirstName');
     if(savedFirstName){
       const greet = document.getElementById('greetMain');
       if(greet) greet.textContent = 'Olá, ' + savedFirstName + '! ☀️';
@@ -1100,6 +1100,12 @@
     if(hasNativeSeniorBridge()){
       if(typeof window.AndroidSenior.clearSession === 'function') window.AndroidSenior.clearSession();
       localStorage.removeItem('seniorSessionKnown');
+      localStorage.removeItem('seniorFirstName');
+      localStorage.removeItem('seniorScheduleStart');
+      localStorage.removeItem('seniorScheduleEnd');
+      localStorage.removeItem('seniorScheduleBreak');
+      const greet = document.getElementById('greetMain');
+      if(greet) greet.textContent = 'Olá! ☀️';
       seniorConnected = false;
       setSeniorVisual('disconnected','Sessão da Senior removida deste app.');
       closeSeniorModal();
@@ -1210,9 +1216,9 @@
         if(greet) greet.textContent = 'Olá, ' + formatted + '! ☀️';
       }
     } else {
-      const saved = localStorage.getItem('seniorFirstName') || 'Luiz';
+      const saved = localStorage.getItem('seniorFirstName');
       const greet = document.getElementById('greetMain');
-      if(greet) greet.textContent = 'Olá, ' + saved + '! ☀️';
+      if(greet) greet.textContent = saved ? ('Olá, ' + saved + '! ☀️') : 'Olá! ☀️';
     }
 
     if(data && data.scheduleStart) localStorage.setItem('seniorScheduleStart', data.scheduleStart);
