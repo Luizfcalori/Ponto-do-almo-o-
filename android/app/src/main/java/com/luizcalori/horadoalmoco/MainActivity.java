@@ -1,10 +1,15 @@
 package com.luizcalori.horadoalmoco;
 
 import android.annotation.SuppressLint;
+import android.Manifest;
 import android.app.Activity;
+import android.app.AlarmManager;
+import android.app.PendingIntent;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -27,6 +32,8 @@ import android.widget.TextView;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.json.JSONTokener;
+
+import java.util.Calendar;
 
 public class MainActivity extends Activity {
 
@@ -130,7 +137,22 @@ public class MainActivity extends Activity {
             " }catch(e){}" +
             " return texts;" +
             "}" +
-            "var ds=docs(),today=new Intl.DateTimeFormat('pt-BR',{timeZone:'America/Sao_Paulo',day:'2-digit',month:'2-digit',year:'numeric'}).format(new Date());" +
+            "function findTodayBlock(d,today,todayShort){" +
+            " var best=null,bestLen=999999;" +
+            " try{" +
+            "  var els=[].slice.call(d.querySelectorAll('tr,[role=row],tbody,li,section,article,div'));" +
+            "  for(var i=0;i<els.length;i++){" +
+            "   var txt=(els[i].innerText||'').trim();" +
+            "   if(!txt||txt.length>6000)continue;" +
+            "   if(txt.indexOf(today)<0&&txt.indexOf(todayShort)<0)continue;" +
+            "   var tm=timeMatches(txt);" +
+            "   if(!tm.length)continue;" +
+            "   if(txt.length<bestLen){best=txt;bestLen=txt.length;}" +
+            "  }" +
+            " }catch(e){}" +
+            " return best;" +
+            "}" +
+            "var ds=docs(),today=new Intl.DateTimeFormat('pt-BR',{timeZone:'America/Sao_Paulo',day:'2-digit',month:'2-digit',year:'numeric'}).format(new Date()),todayShort=today.slice(0,5);" +
             "for(var di=0;di<ds.length;di++){" +
             " var d=ds[di],h=findHeading(d);if(!h)continue;" +
             " var bodyText=(d.body&&d.body.innerText)||'';" +
@@ -149,10 +171,19 @@ public class MainActivity extends Activity {
             "  }" +
             "  if(parts.length)firstName=parts[0].split(/\\s+/)[0];" +
             " }" +
-            " var texts=collectAfterHeading(d,h),times=[],evidence=[];" +
+            " var todayBlock=findTodayBlock(d,today,todayShort),times=[],evidence=[];" +
+            " if(todayBlock){" +
+            "  var todays=timeMatches(todayBlock);" +
+            "  for(var tb=0;tb<todays.length;tb++){if(times.indexOf(todays[tb])<0){times.push(todays[tb]);evidence.push(todayBlock.slice(0,260));}}" +
+            " }" +
+            " if(times.length>0){" +
+            "  if(times.length>4)times=[times[0],times[1],times[2],times[times.length-1]];" +
+            "  return JSON.stringify({ok:true,loggedIn:true,day:today,times:times,message:'Marcações de hoje lidas nos comprovantes.',frame:di,evidence:evidence.slice(0,times.length),firstName:firstName,scheduleStart:scheduleStart,scheduleEnd:scheduleEnd,scheduleBreak:scheduleBreak});" +
+            " }" +
+            " var texts=collectAfterHeading(d,h);times=[];evidence=[];" +
             " for(var k=0;k<texts.length;k++){" +
             "  var t=texts[k],nt=norm(t).toUpperCase();" +
-            "  var hasDate=t.indexOf(today)>=0 || /\\b\\d{2}\\/\\d{2}\\/\\d{4}\\b/.test(t);" +
+            "  var hasDate=t.indexOf(today)>=0 || t.indexOf(todayShort)>=0;" +
             "  var looksReceipt=/COMPROVANTE|MARCACAO|DATA|HORA|NSR|LOCAL|ORIGEM|REGISTRO/.test(nt);" +
             "  if(!hasDate && !looksReceipt && t.length>120)continue;" +
             "  var tm=timeMatches(t);" +
@@ -165,7 +196,8 @@ public class MainActivity extends Activity {
             "  }" +
             " }" +
             " if(times.length>0){" +
-            "  return JSON.stringify({ok:true,loggedIn:true,day:today,times:times.slice(0,8),message:'Marcações lidas somente dos comprovantes.',frame:di,evidence:evidence.slice(0,8),firstName:firstName,scheduleStart:scheduleStart,scheduleEnd:scheduleEnd,scheduleBreak:scheduleBreak});" +
+            "  if(times.length>4)times=[times[0],times[1],times[2],times[times.length-1]];" +
+            "  return JSON.stringify({ok:true,loggedIn:true,day:today,times:times,message:'Marcações de hoje lidas nos comprovantes.',frame:di,evidence:evidence.slice(0,times.length),firstName:firstName,scheduleStart:scheduleStart,scheduleEnd:scheduleEnd,scheduleBreak:scheduleBreak});" +
             " }" +
             " return JSON.stringify({ok:false,loggedIn:true,day:today,times:[],message:'Comprovantes encontrados, mas ainda não identifiquei as batidas de hoje.',frame:di,firstName:firstName,scheduleStart:scheduleStart,scheduleEnd:scheduleEnd,scheduleBreak:scheduleBreak});" +
             "}" +
@@ -183,6 +215,11 @@ public class MainActivity extends Activity {
 
         CookieManager cookieManager = CookieManager.getInstance();
         cookieManager.setAcceptCookie(true);
+
+        if (Build.VERSION.SDK_INT >= 33 &&
+                checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 1042);
+        }
 
         root = new FrameLayout(this);
         dashboardWebView = new WebView(this);
@@ -496,6 +533,112 @@ public class MainActivity extends Activity {
         });
     }
 
+    private void scheduleNativeReturnAlarms(String returnTime) {
+        try {
+            String[] parts = returnTime.split(":");
+            if (parts.length < 2) return;
+
+            int hour = Integer.parseInt(parts[0]);
+            int minute = Integer.parseInt(parts[1]);
+
+            Calendar now = Calendar.getInstance();
+            Calendar exact = Calendar.getInstance();
+            exact.set(Calendar.HOUR_OF_DAY, hour);
+            exact.set(Calendar.MINUTE, minute);
+            exact.set(Calendar.SECOND, 0);
+            exact.set(Calendar.MILLISECOND, 0);
+            if (!exact.after(now)) {
+                exact.add(Calendar.DAY_OF_YEAR, 1);
+            }
+
+            cancelNativeReturnAlarms();
+
+            long exactAt = exact.getTimeInMillis();
+            long beforeAt = exactAt - (3L * 60L * 1000L);
+            if (beforeAt > System.currentTimeMillis()) {
+                scheduleOneReturnAlarm(
+                        beforeAt,
+                        7301,
+                        "Faltam 3 minutos",
+                        "Faltam 3 minutos para bater o ponto de retorno do almoço."
+                );
+            }
+
+            scheduleOneReturnAlarm(
+                    exactAt,
+                    7302,
+                    "Hora de retornar",
+                    "Hora de bater o ponto de retorno do almoço."
+            );
+        } catch (Exception ignored) {}
+    }
+
+    private void scheduleOneReturnAlarm(long triggerAtMillis, int requestCode, String title, String message) {
+        AlarmManager alarmManager = (AlarmManager) getSystemService(ALARM_SERVICE);
+        if (alarmManager == null) return;
+
+        Intent intent = new Intent(this, ReturnAlarmReceiver.class);
+        intent.putExtra("notification_id", requestCode);
+        intent.putExtra("title", title);
+        intent.putExtra("message", message);
+
+        PendingIntent pendingIntent = PendingIntent.getBroadcast(
+                this,
+                requestCode,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
+
+        try {
+            if (Build.VERSION.SDK_INT >= 23) {
+                alarmManager.setExactAndAllowWhileIdle(
+                        AlarmManager.RTC_WAKEUP,
+                        triggerAtMillis,
+                        pendingIntent
+                );
+            } else {
+                alarmManager.setExact(
+                        AlarmManager.RTC_WAKEUP,
+                        triggerAtMillis,
+                        pendingIntent
+                );
+            }
+        } catch (SecurityException exactDenied) {
+            if (Build.VERSION.SDK_INT >= 23) {
+                alarmManager.setAndAllowWhileIdle(
+                        AlarmManager.RTC_WAKEUP,
+                        triggerAtMillis,
+                        pendingIntent
+                );
+            } else {
+                alarmManager.set(
+                        AlarmManager.RTC_WAKEUP,
+                        triggerAtMillis,
+                        pendingIntent
+                );
+            }
+        }
+    }
+
+    private void cancelNativeReturnAlarms() {
+        AlarmManager alarmManager = (AlarmManager) getSystemService(ALARM_SERVICE);
+        if (alarmManager == null) return;
+
+        for (int requestCode : new int[]{7301, 7302}) {
+            Intent intent = new Intent(this, ReturnAlarmReceiver.class);
+            PendingIntent pendingIntent = PendingIntent.getBroadcast(
+                    this,
+                    requestCode,
+                    intent,
+                    PendingIntent.FLAG_NO_CREATE | PendingIntent.FLAG_IMMUTABLE
+            );
+            if (pendingIntent != null) {
+                alarmManager.cancel(pendingIntent);
+                pendingIntent.cancel();
+            }
+        }
+    }
+
     private int dp(int value) {
         return Math.round(value * getResources().getDisplayMetrics().density);
     }
@@ -515,6 +658,16 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void syncNow() {
             runOnUiThread(MainActivity.this::syncSeniorNow);
+        }
+
+        @JavascriptInterface
+        public void scheduleReturnAlarms(String returnTime) {
+            runOnUiThread(() -> scheduleNativeReturnAlarms(returnTime));
+        }
+
+        @JavascriptInterface
+        public void cancelReturnAlarms() {
+            runOnUiThread(MainActivity.this::cancelNativeReturnAlarms);
         }
 
         @JavascriptInterface
