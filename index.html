@@ -534,7 +534,16 @@
         <span class="pill">Ativo</span>
       </div>
 
+      <div class="setting-row">
+        <div>
+          <div class="setting-title">Atualizar aplicativo</div>
+          <div class="setting-sub" id="appUpdateSub">Verificando a versão instalada...</div>
+        </div>
+        <span class="pill" id="appVersionPill">--</span>
+      </div>
+
       <button class="btn btn-outline" onclick="openSeniorModal()">Configurar Senior</button>
+      <button class="btn btn-orange" id="appUpdateBtn" onclick="checkAppUpdate(true)">Verificar atualização</button>
     </div>
   </section>
 
@@ -598,6 +607,8 @@
   let ultimoRetornoMinuto = null;
   let notifyEnabled = true;
   let toastTimer = null;
+  let currentNativeVersion = null;
+  let latestAppUpdate = null;
 
   function pad(n){ return String(n).padStart(2,'0'); }
 
@@ -637,8 +648,139 @@
 
     if(name === 'history') mostrarHistorico();
     if(name === 'stats') atualizarEstatisticas();
+    if(name === 'profile'){
+      refreshAppVersionInfo();
+      checkAppUpdate(false);
+    }
     window.scrollTo({top:0,behavior:'smooth'});
   }
+
+  function refreshAppVersionInfo(){
+    const pill = document.getElementById('appVersionPill');
+    const sub = document.getElementById('appUpdateSub');
+
+    if(!(window.AndroidSenior && typeof window.AndroidSenior.getVersionInfo === 'function')){
+      currentNativeVersion = null;
+      if(pill) pill.textContent = 'Web';
+      if(sub) sub.textContent = 'Atualizações automáticas disponíveis no aplicativo Android.';
+      return null;
+    }
+
+    try{
+      const raw = window.AndroidSenior.getVersionInfo();
+      const data = typeof raw === 'string' ? JSON.parse(raw) : raw;
+      currentNativeVersion = data || null;
+      if(pill) pill.textContent = data && data.versionName ? ('v' + data.versionName) : '--';
+      if(sub) sub.textContent =
+        data && data.versionName
+          ? 'Versão instalada: ' + data.versionName
+          : 'Versão instalada não identificada.';
+      return data;
+    }catch(_){
+      if(pill) pill.textContent = '--';
+      if(sub) sub.textContent = 'Não consegui identificar a versão instalada.';
+      return null;
+    }
+  }
+
+  async function checkAppUpdate(userInitiated){
+    const btn = document.getElementById('appUpdateBtn');
+    const sub = document.getElementById('appUpdateSub');
+    const current = currentNativeVersion || refreshAppVersionInfo();
+
+    if(!current || !current.versionCode){
+      if(btn){
+        btn.textContent = 'Atualizador disponível no Android';
+        btn.disabled = true;
+      }
+      return;
+    }
+
+    if(btn && userInitiated){
+      btn.disabled = true;
+      btn.textContent = 'Verificando...';
+    }
+
+    try{
+      const response = await fetch('/app-update.json?t=' + Date.now(),{
+        cache:'no-store'
+      });
+      if(!response.ok) throw new Error('metadata');
+      const data = await response.json();
+      latestAppUpdate = data;
+
+      const latestCode = Number(data.versionCode || 0);
+      const currentCode = Number(current.versionCode || 0);
+
+      if(latestCode > currentCode && data.apkUrl){
+        if(sub) sub.textContent = 'Nova versão ' + data.versionName + ' disponível.';
+        if(btn){
+          btn.disabled = false;
+          btn.textContent = 'Atualizar para ' + data.versionName;
+          btn.onclick = startAppUpdate;
+        }
+        if(userInitiated) showToast('Nova versão ' + data.versionName + ' disponível.');
+      } else {
+        if(sub) sub.textContent = 'Aplicativo atualizado • versão ' + current.versionName;
+        if(btn){
+          btn.disabled = false;
+          btn.textContent = 'Verificar atualização';
+          btn.onclick = function(){ checkAppUpdate(true); };
+        }
+        if(userInitiated) showToast('Você já está na versão mais recente.');
+      }
+    }catch(_){
+      if(sub) sub.textContent = 'Não foi possível consultar atualizações agora.';
+      if(btn){
+        btn.disabled = false;
+        btn.textContent = 'Tentar novamente';
+        btn.onclick = function(){ checkAppUpdate(true); };
+      }
+      if(userInitiated) showToast('Falha ao consultar atualização.');
+    }
+  }
+
+  function startAppUpdate(){
+    if(!latestAppUpdate || !latestAppUpdate.apkUrl){
+      checkAppUpdate(true);
+      return;
+    }
+
+    if(window.AndroidSenior && typeof window.AndroidSenior.installUpdate === 'function'){
+      window.AndroidSenior.installUpdate(latestAppUpdate.apkUrl);
+      return;
+    }
+
+    showToast('Atualização automática disponível apenas no aplicativo Android.');
+  }
+
+  window.receiveAppUpdaterStatus = function(raw){
+    try{
+      const data = typeof raw === 'string' ? JSON.parse(raw) : raw;
+      if(!data) return;
+      const btn = document.getElementById('appUpdateBtn');
+      const sub = document.getElementById('appUpdateSub');
+
+      if(data.message && sub) sub.textContent = data.message;
+
+      if(data.state === 'downloading' && btn){
+        btn.disabled = true;
+        btn.textContent = 'Baixando atualização...';
+      } else if(data.state === 'permission_required' && btn){
+        btn.disabled = false;
+        btn.textContent = 'Continuar atualização';
+      } else if(data.state === 'installer' && btn){
+        btn.disabled = false;
+        btn.textContent = 'Confirmar no Android';
+      } else if(data.state === 'error' && btn){
+        btn.disabled = false;
+        btn.textContent = 'Tentar novamente';
+        btn.onclick = startAppUpdate;
+      }
+
+      if(data.message) showToast(data.message);
+    }catch(_){}
+  };
 
   function showToast(msg){
     const el = document.getElementById('toast');
