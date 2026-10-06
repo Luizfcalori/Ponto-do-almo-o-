@@ -21,10 +21,8 @@ jobs:
     env:
       ANDROID_HOME: /usr/local/lib/android/sdk
       ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
-      KEYSTORE_B64: ${{ secrets.HORA_ALMOCO_KEYSTORE_B64 }}
-      KEYSTORE_PASSWORD: ${{ secrets.HORA_ALMOCO_KEYSTORE_PASSWORD }}
-      KEY_ALIAS: ${{ secrets.HORA_ALMOCO_KEY_ALIAS }}
-      KEY_PASSWORD: ${{ secrets.HORA_ALMOCO_KEY_PASSWORD }}
+      SIGNING_PASSWORD: ${{ secrets.HORA_ALMOCO_SIGNING_PASSWORD }}
+      KEY_ALIAS: hora-do-almoco
 
     steps:
       - name: Checkout
@@ -76,33 +74,26 @@ jobs:
       - name: Validate stable signing
         shell: bash
         run: |
-          missing=0
-          for name in KEYSTORE_B64 KEYSTORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
-            if [ -z "${!name}" ]; then
-              echo "Secret ausente: $name"
-              missing=1
-            fi
-          done
-          if [ "$missing" -ne 0 ]; then
-            echo "Configure os quatro secrets HORA_ALMOCO_* antes de publicar."
+          if [ -z "$SIGNING_PASSWORD" ]; then
+            echo "Secret ausente: HORA_ALMOCO_SIGNING_PASSWORD"
             exit 1
           fi
 
       - name: Restore stable keystore
         shell: bash
         run: |
-          printf '%s' "$KEYSTORE_B64" | base64 --decode > "$RUNNER_TEMP/hora-do-almoco.jks"
-          keytool -list -keystore "$RUNNER_TEMP/hora-do-almoco.jks" -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" >/dev/null
+          base64 --decode android/signing/hora-do-almoco-release.jks.b64 > "$RUNNER_TEMP/hora-do-almoco-release.jks"
+          keytool -list             -keystore "$RUNNER_TEMP/hora-do-almoco-release.jks"             -storepass "$SIGNING_PASSWORD"             -alias "$KEY_ALIAS" >/dev/null
 
       - name: Build signed release APK
         working-directory: android
         shell: bash
         run: |
           gradle :app:assembleRelease --stacktrace \
-            -Pandroid.injected.signing.store.file="$RUNNER_TEMP/hora-do-almoco.jks" \
-            -Pandroid.injected.signing.store.password="$KEYSTORE_PASSWORD" \
+            -Pandroid.injected.signing.store.file="$RUNNER_TEMP/hora-do-almoco-release.jks" \
+            -Pandroid.injected.signing.store.password="$SIGNING_PASSWORD" \
             -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
-            -Pandroid.injected.signing.key.password="$KEY_PASSWORD"
+            -Pandroid.injected.signing.key.password="$SIGNING_PASSWORD"
 
       - name: Prepare APK
         shell: bash
