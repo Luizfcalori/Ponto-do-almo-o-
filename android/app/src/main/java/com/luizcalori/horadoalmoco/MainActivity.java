@@ -133,6 +133,22 @@ public class MainActivity extends Activity {
             "var ds=docs(),today=new Intl.DateTimeFormat('pt-BR',{timeZone:'America/Sao_Paulo',day:'2-digit',month:'2-digit',year:'numeric'}).format(new Date());" +
             "for(var di=0;di<ds.length;di++){" +
             " var d=ds[di],h=findHeading(d);if(!h)continue;" +
+            " var bodyText=(d.body&&d.body.innerText)||'';" +
+            " var scheduleMatch=bodyText.match(/([01]?\\d|2[0-3]):([0-5]\\d)\\s*-\\s*([01]?\\d|2[0-3]):([0-5]\\d)\\s*\\((\\d{1,2}:[0-5]\\d)\\)/);" +
+            " var scheduleStart=scheduleMatch?(String(scheduleMatch[1]).padStart(2,'0')+':'+scheduleMatch[2]):null;" +
+            " var scheduleEnd=scheduleMatch?(String(scheduleMatch[3]).padStart(2,'0')+':'+scheduleMatch[4]):null;" +
+            " var scheduleBreak=scheduleMatch?scheduleMatch[5]:null;" +
+            " var lines=bodyText.split(/\\n+/).map(function(x){return (x||'').trim();}).filter(Boolean),firstName=null;" +
+            " var esc=-1;for(var li=0;li<lines.length;li++){if(norm(lines[li]).toUpperCase()==='ESCALA DE TRABALHO'){esc=li;break;}}" +
+            " if(esc>=0){" +
+            "  var parts=[];" +
+            "  for(var z=esc-1;z>=Math.max(0,esc-8);z--){" +
+            "   var cand=lines[z],nc=norm(cand).toUpperCase();" +
+            "   if(/^[A-ZÀ-Ú][A-ZÀ-Ú ]{1,60}$/.test(cand)&&!/(MARCA|PONTO|COMPROVANTE|PERIODO|ENTITIES|DEPENDENCIES|ESCALA|ATUALIZACAO)/.test(nc)){parts.unshift(cand);}" +
+            "   else if(parts.length)break;" +
+            "  }" +
+            "  if(parts.length)firstName=parts[0].split(/\\s+/)[0];" +
+            " }" +
             " var texts=collectAfterHeading(d,h),times=[],evidence=[];" +
             " for(var k=0;k<texts.length;k++){" +
             "  var t=texts[k],nt=norm(t).toUpperCase();" +
@@ -149,9 +165,9 @@ public class MainActivity extends Activity {
             "  }" +
             " }" +
             " if(times.length>0){" +
-            "  return JSON.stringify({ok:true,loggedIn:true,day:today,times:times.slice(0,8),message:'Marcações lidas somente dos comprovantes.',frame:di,evidence:evidence.slice(0,8)});" +
+            "  return JSON.stringify({ok:true,loggedIn:true,day:today,times:times.slice(0,8),message:'Marcações lidas somente dos comprovantes.',frame:di,evidence:evidence.slice(0,8),firstName:firstName,scheduleStart:scheduleStart,scheduleEnd:scheduleEnd,scheduleBreak:scheduleBreak});" +
             " }" +
-            " return JSON.stringify({ok:false,loggedIn:true,day:today,times:[],message:'Comprovantes encontrados, mas ainda não identifiquei as batidas de hoje.',frame:di});" +
+            " return JSON.stringify({ok:false,loggedIn:true,day:today,times:[],message:'Comprovantes encontrados, mas ainda não identifiquei as batidas de hoje.',frame:di,firstName:firstName,scheduleStart:scheduleStart,scheduleEnd:scheduleEnd,scheduleBreak:scheduleBreak});" +
             "}" +
             "var topText=(document.body&&document.body.innerText)||'',first=norm(topText).toUpperCase().slice(0,3000),u=location.href||'';" +
             "var login=/LOGIN|ENTRAR|USUARIO|SENHA|PASSWORD|AUTENTICACAO/.test(first)||/login|authentication|signin|sso/i.test(u);" +
