@@ -459,7 +459,7 @@
   <section id="view-lunch" class="view">
     <div class="page-header">
       <div class="page-title">Hora do Almoço</div>
-      <div class="page-sub">Intervalo fixo de 1 hora e 12 minutos</div>
+      <div class="page-sub" id="lunchPageSub">Intervalo conforme sua escala da Senior</div>
     </div>
 
     <div class="lunch-hero">
@@ -476,7 +476,7 @@
         </div>
         <div class="metric">
           <div class="metric-label">Duração do intervalo</div>
-          <div class="metric-value">1h12</div>
+          <div class="metric-value" id="lunchDurationValue">--</div>
         </div>
       </div>
 
@@ -551,7 +551,7 @@
         </div>
         <div class="stat-box green">
           <div class="k">Intervalo padrão</div>
-          <div class="v">1h12</div>
+          <div class="v" id="statInterval">--</div>
         </div>
         <div class="stat-box blue">
           <div class="k">Saída média</div>
@@ -585,7 +585,7 @@
           <div class="setting-title">Intervalo do almoço</div>
           <div class="setting-sub">Usado em todos os cálculos automáticos.</div>
         </div>
-        <span class="pill orange">72 min</span>
+        <span class="pill orange" id="profileIntervalPill">--</span>
       </div>
 
       <div class="setting-row">
@@ -680,7 +680,7 @@
 </div>
 
 <script>
-  const INTERVALO_MINUTOS = 72;
+  const INTERVALO_PADRAO_MINUTOS = 72;
   let ultimoRetornoHora = null;
   let ultimoRetornoMinuto = null;
   let notifyEnabled = true;
@@ -689,6 +689,48 @@
   let latestAppUpdate = null;
 
   function pad(n){ return String(n).padStart(2,'0'); }
+
+  function getLunchIntervalMinutes(){
+    const raw = localStorage.getItem('seniorScheduleBreak');
+    if(raw){
+      const match = String(raw).trim().match(/^(\d{1,2}):([0-5]\d)$/);
+      if(match){
+        const hours = Number(match[1]);
+        const minutes = Number(match[2]);
+        const total = hours * 60 + minutes;
+        if(total > 0) return total;
+      }
+    }
+    return INTERVALO_PADRAO_MINUTOS;
+  }
+
+  function formatIntervalDuration(totalMinutes){
+    const total = Math.max(0,Number(totalMinutes) || 0);
+    const h = Math.floor(total / 60);
+    const m = total % 60;
+    if(h && m) return h + 'h' + pad(m);
+    if(h) return h + 'h';
+    return m + ' min';
+  }
+
+  function refreshIntervalUI(){
+    const minutes = getLunchIntervalMinutes();
+    const formatted = formatIntervalDuration(minutes);
+    const source = localStorage.getItem('seniorScheduleBreak') ? 'Escala Senior' : 'Padrão';
+
+    const metric = document.getElementById('lunchDurationValue');
+    const stat = document.getElementById('statInterval');
+    const pill = document.getElementById('profileIntervalPill');
+    const pageSub = document.getElementById('lunchPageSub');
+
+    if(metric) metric.textContent = formatted;
+    if(stat) stat.textContent = formatted;
+    if(pill) pill.textContent = formatted;
+    if(pageSub) pageSub.textContent =
+      source === 'Escala Senior'
+        ? 'Intervalo da sua escala • ' + formatted
+        : 'Intervalo padrão • ' + formatted;
+  }
 
   function setClockRingProgress(percent){
     const ring = document.querySelector('.clock-ring');
@@ -1002,7 +1044,7 @@
     let hora = parseInt(partes[0],10);
     let minutos = parseInt(partes[1],10);
 
-    let total = hora * 60 + minutos + INTERVALO_MINUTOS;
+    let total = hora * 60 + minutos + getLunchIntervalMinutes();
     total = total % (24 * 60);
 
     const rh = Math.floor(total / 60);
@@ -1285,6 +1327,7 @@
       document.getElementById('sumReturn').textContent = hist[0].retorno || '--:--';
     }
 
+    refreshIntervalUI();
     updateScheduledWorkCard();
     if(ativo) renderLunchClock(ativo.saida,ativo.retorno);
 
@@ -1521,7 +1564,7 @@
   function calcReturnFromTime(saida){
     const p = saida.split(':').map(Number);
     if(p.length < 2 || Number.isNaN(p[0]) || Number.isNaN(p[1])) return null;
-    let total = (p[0]*60+p[1]+INTERVALO_MINUTOS)%(24*60);
+    let total = (p[0]*60+p[1]+getLunchIntervalMinutes())%(24*60);
     return pad(Math.floor(total/60))+':'+pad(total%60);
   }
 
@@ -1550,7 +1593,9 @@
     document.getElementById('progressEnd').textContent = retorno;
     document.getElementById('progressCard').style.display = 'block';
     document.getElementById('lunchHeroTitle').textContent = 'Almoço detectado pela Senior!';
-    document.getElementById('lunchHeroText').textContent = 'Sua saída foi reconhecida automaticamente e o retorno foi calculado em +1h12.';
+    document.getElementById('lunchHeroText').textContent =
+      'Sua saída foi reconhecida automaticamente e o retorno foi calculado com ' +
+      formatIntervalDuration(getLunchIntervalMinutes()) + ' de intervalo.';
     document.getElementById('sumLunchOut').textContent = saida;
     document.getElementById('sumReturn').textContent = retorno;
     renderLunchClock(saida,retorno);
@@ -1616,6 +1661,7 @@
     if(data && data.scheduleEnd) localStorage.setItem('seniorScheduleEnd', data.scheduleEnd);
     if(data && data.scheduleBreak) localStorage.setItem('seniorScheduleBreak', data.scheduleBreak);
 
+    refreshIntervalUI();
     updateScheduledWorkCard();
   }
 
