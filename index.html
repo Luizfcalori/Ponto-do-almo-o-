@@ -767,7 +767,10 @@
 
   function atualizarRelogio(){
     const agora = new Date();
-    document.getElementById('currentTime').textContent = '--:--';
+    const ring = document.getElementById('homeClockRing');
+    if(!(ring && (ring.classList.contains('mode-lunch') || ring.classList.contains('mode-done')))){
+      document.getElementById('currentTime').textContent = '--:--';
+    }
     document.getElementById('todayText').innerHTML =
       agora.toLocaleDateString('pt-BR',{weekday:'long'}) + '<br>' +
       agora.toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
