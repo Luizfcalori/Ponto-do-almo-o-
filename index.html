@@ -955,13 +955,32 @@
           setSeniorVisual('disconnected','Toque aqui para abrir a Senior e fazer login.');
         } else {
           setSeniorVisual('connected',data.message || 'Senior aberta • aguardando os comprovantes.');
-          // Sem marcações ainda: limpa valores de ontem e mostra somente a escala prevista.
-          applySeniorEvents([]);
+          const dayKey = data.day || new Date().toLocaleDateString('pt-BR');
+          let cached = [];
+          try{ cached = JSON.parse(localStorage.getItem('seniorClockings:' + dayKey) || '[]'); }catch(_){ cached = []; }
+          if(Array.isArray(cached) && cached.length){
+            applySeniorEvents(cached);
+          } else {
+            applySeniorEvents([]);
+          }
         }
         return;
       }
 
-      const events = sanitizeSeniorClockings(data);
+      let events = sanitizeSeniorClockings(data);
+      const dayKey = data.day || new Date().toLocaleDateString('pt-BR');
+      const cacheKey = 'seniorClockings:' + dayKey;
+      let cached = [];
+      try{ cached = JSON.parse(localStorage.getItem(cacheKey) || '[]'); }catch(_){ cached = []; }
+
+      // A página da Senior às vezes renderiza só uma batida durante a atualização.
+      // Nunca substituímos um conjunto maior do mesmo dia por um conjunto menor.
+      if(Array.isArray(cached) && cached.length > events.length){
+        events = cached;
+      } else if(events.length){
+        localStorage.setItem(cacheKey,JSON.stringify(events));
+      }
+
       const times = events.map(function(e){ return e.time; });
 
       seniorConnected = true;
