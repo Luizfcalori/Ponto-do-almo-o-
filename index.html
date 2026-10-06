@@ -973,26 +973,49 @@
     return value && typeof value === 'object' ? value : null;
   }
 
+  async function loadWeatherFromServer(){
+    const response = await fetch('/api/weather',{cache:'no-store'});
+    if(!response.ok) throw new Error('weather-server');
+    const json = await response.json();
+    if(!json || !json.ok) throw new Error('weather-server');
+    const data = {
+      temp:Number(json.temp),
+      code:Number(json.code),
+      isDay:Number(json.isDay),
+      savedAt:Date.now()
+    };
+    applyWeather(data);
+    try{ localStorage.setItem('homeWeatherCache',JSON.stringify(data)); }catch(_){}
+  }
+
   function refreshWeather(){
     if(weatherFetchInFlight) return;
-    if(!navigator.geolocation){
-      setTimeBasedWeatherFallback();
-      return;
-    }
-
     weatherFetchInFlight = true;
-    navigator.geolocation.getCurrentPosition(
-      function(position){
-        loadWeatherForCoords(position.coords.latitude,position.coords.longitude)
-          .catch(function(){ if(!restoreWeatherCache()) setTimeBasedWeatherFallback(); })
-          .finally(function(){ weatherFetchInFlight = false; });
-      },
-      function(){
+
+    loadWeatherFromServer()
+      .then(function(){
         weatherFetchInFlight = false;
-        restoreWeatherCache();
-      },
-      {enableHighAccuracy:false,timeout:8000,maximumAge:30*60*1000}
-    );
+      })
+      .catch(function(){
+        if(!navigator.geolocation){
+          weatherFetchInFlight = false;
+          if(!restoreWeatherCache()) setTimeBasedWeatherFallback();
+          return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+          function(position){
+            loadWeatherForCoords(position.coords.latitude,position.coords.longitude)
+              .catch(function(){ if(!restoreWeatherCache()) setTimeBasedWeatherFallback(); })
+              .finally(function(){ weatherFetchInFlight = false; });
+          },
+          function(){
+            weatherFetchInFlight = false;
+            if(!restoreWeatherCache()) setTimeBasedWeatherFallback();
+          },
+          {enableHighAccuracy:false,timeout:8000,maximumAge:30*60*1000}
+        );
+      });
   }
 
   function atualizarRelogio(){
