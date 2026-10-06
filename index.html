@@ -49,8 +49,8 @@
     .view.active{display:block}
 
     .home-hero{
-      min-height:610px;
-      padding:calc(24px + env(safe-area-inset-top)) 22px 28px;
+      min-height:0;
+      padding:calc(20px + env(safe-area-inset-top)) 20px 18px;
       background:
         radial-gradient(circle at 85% 10%, rgba(35,136,255,.18), transparent 35%),
         radial-gradient(circle at 10% 80%, rgba(22,199,132,.16), transparent 36%),
@@ -77,7 +77,7 @@
       background:rgba(255,255,255,.07);color:#fff;font-size:20px
     }
 
-    .greeting{display:flex;justify-content:space-between;gap:14px;margin-top:28px;align-items:flex-start}
+    .greeting{display:flex;justify-content:space-between;gap:14px;margin-top:20px;align-items:flex-start}
     .greeting-left{min-width:0;flex:1}
     .greet-line{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
     .greet-main{font-size:25px;font-weight:900;letter-spacing:-.5px}
@@ -97,51 +97,57 @@
       .live-clock{font-size:15px}
     }
 
-    .sync-card{
-      margin-top:24px;background:#fff;color:var(--text);border-radius:19px;padding:15px 16px;
-      display:flex;justify-content:space-between;align-items:center;box-shadow:0 12px 30px rgba(0,0,0,.12)
+    .hero-divider{
+      height:2px;margin:13px 2px 0;border-radius:99px;
+      background:linear-gradient(90deg,rgba(22,199,132,0),rgba(22,199,132,.92) 18%,rgba(22,199,132,.92) 82%,rgba(22,199,132,0));
+      box-shadow:0 0 13px rgba(22,199,132,.18)
     }
-    .sync-left{gap:12px}
-    .dot{width:10px;height:10px;border-radius:50%;background:#f59e0b;box-shadow:0 0 0 5px #fff6d9}
-    .sync-title{font-weight:850;font-size:14px}
-    .sync-sub{font-size:11.5px;color:var(--muted);margin-top:2px;max-width:220px}
-    .senior-mark{font-weight:900;color:#0d8a69;font-size:18px;letter-spacing:-.3px}
 
-    .clock-zone{display:flex;justify-content:center;margin-top:28px}
+    .sync-card{
+      margin-top:10px;background:#fff;color:var(--text);border-radius:15px;padding:10px 12px;
+      display:flex;justify-content:space-between;align-items:center;box-shadow:0 9px 22px rgba(0,0,0,.10)
+    }
+    .sync-left{gap:10px}
+    .dot{width:9px;height:9px;border-radius:50%;background:#f59e0b;box-shadow:0 0 0 4px #fff6d9}
+    .sync-title{font-weight:850;font-size:12.5px}
+    .sync-sub{font-size:9.8px;color:var(--muted);margin-top:1px;max-width:220px}
+    .senior-mark{font-weight:900;color:#0d8a69;font-size:15.5px;letter-spacing:-.3px}
+
+    .clock-zone{display:flex;justify-content:center;margin-top:10px}
     .clock-ring{
-      width:286px;height:286px;border-radius:50%;position:relative;display:grid;place-items:center;
+      width:246px;height:246px;border-radius:50%;position:relative;display:grid;place-items:center;
       background:conic-gradient(rgba(88,116,128,.42) 0 100%);
       box-shadow:0 0 45px rgba(22,199,132,.10);
       transition:background .45s ease,box-shadow .45s ease
     }
     .clock-ring:before{
-      content:"";position:absolute;inset:14px;border-radius:50%;
+      content:"";position:absolute;inset:12px;border-radius:50%;
       background:linear-gradient(160deg,#092236,#071827);
       box-shadow:inset 0 0 0 1px rgba(255,255,255,.06)
     }
-    .clock-content{position:relative;text-align:center;z-index:1;width:82%;display:flex;flex-direction:column;align-items:center}
+    .clock-content{position:relative;text-align:center;z-index:1;width:82%;display:flex;flex-direction:column;align-items:center;transform:translateY(-6px)}
     .clock-icon{
-      font-size:29px;margin-bottom:8px;line-height:1;display:grid;place-items:center;
+      font-size:25px;margin-bottom:6px;line-height:1;display:grid;place-items:center;
       transition:.3s ease
     }
-    .clock-state{font-size:12px;font-weight:850;letter-spacing:1.25px;color:#d8e7f2}
-    .clock-time{font-size:53px;line-height:1;font-weight:950;margin:8px 0 11px;letter-spacing:-2px}
-    .clock-subtitle{display:none;font-size:13px;font-weight:700;color:#eef7fb;margin-top:-3px}
-    .clock-meta{font-size:12.5px;color:#bed0df;line-height:1.55}
-    .clock-footer{display:none;font-size:10.5px;color:#9fb5c7;margin-top:8px;align-items:center;gap:8px}
+    .clock-state{font-size:10.5px;font-weight:850;letter-spacing:1.15px;color:#d8e7f2}
+    .clock-time{font-size:44px;line-height:1;font-weight:950;margin:6px 0 8px;letter-spacing:-1.7px}
+    .clock-subtitle{display:none;font-size:11.5px;font-weight:700;color:#eef7fb;margin-top:-2px}
+    .clock-meta{font-size:11px;color:#bed0df;line-height:1.4}
+    .clock-footer{display:none;font-size:9.3px;color:#9fb5c7;margin-top:6px;align-items:center;gap:7px}
     .clock-footer:before,.clock-footer:after{content:"";width:24px;height:1px;background:rgba(190,208,223,.34)}
     .clock-ring.enhanced .clock-icon{
-      width:48px;height:48px;border-radius:50%;font-size:22px;margin-bottom:10px;
+      width:40px;height:40px;border-radius:50%;font-size:19px;margin-bottom:7px;
       border:2px solid #42e7bd;background:rgba(20,199,144,.08);
       box-shadow:0 0 22px rgba(55,226,184,.27)
     }
-    .clock-ring.enhanced .clock-state{font-size:11px;letter-spacing:1.35px}
-    .clock-ring.enhanced .clock-time{font-size:48px;margin:7px 0 7px}
+    .clock-ring.enhanced .clock-state{font-size:9.8px;letter-spacing:1.18px}
+    .clock-ring.enhanced .clock-time{font-size:41px;margin:5px 0 5px}
     .clock-ring.enhanced .clock-subtitle{display:block}
     .clock-ring.enhanced .clock-meta{
-      width:188px;margin-top:10px;padding:7px 12px;border-radius:14px;
+      width:170px;margin-top:7px;padding:6px 10px;border-radius:12px;
       background:rgba(12,38,56,.72);border:1px solid rgba(147,197,220,.22);
-      text-align:left;font-size:11px;line-height:1.35;color:#c8d8e5
+      text-align:left;font-size:9.8px;line-height:1.28;color:#c8d8e5
     }
     .clock-ring.enhanced .clock-footer{display:flex}
     .clock-detail-row{display:flex;align-items:center;gap:8px;padding:2px 0}
@@ -150,26 +156,26 @@
     .clock-detail-row.accent{color:#43e6bd;font-weight:800}
     .clock-ring.mode-lunch{box-shadow:0 0 52px rgba(38,221,178,.20)}
     .clock-ring.mode-done{
-      width:276px;height:276px;
+      width:242px;height:242px;
       box-shadow:0 0 52px rgba(38,221,178,.18)
     }
-    .clock-ring.mode-done .clock-content{width:80%}
+    .clock-ring.mode-done .clock-content{width:80%;transform:translateY(-8px)}
     .clock-ring.mode-done .clock-icon{
-      width:43px;height:43px;font-size:24px;font-weight:950;
-      margin-bottom:7px
+      width:39px;height:39px;font-size:21px;font-weight:950;
+      margin-bottom:5px
     }
     .clock-ring.mode-done .clock-state{
-      font-size:10.5px;letter-spacing:1.25px
+      font-size:9.5px;letter-spacing:1.15px
     }
     .clock-ring.mode-done .clock-time{
-      font-size:43px;margin:5px 0 4px;letter-spacing:-1.6px
+      font-size:39px;margin:4px 0 3px;letter-spacing:-1.4px
     }
     .clock-ring.mode-done .clock-subtitle{
-      font-size:11.5px;margin-top:0
+      font-size:10.5px;margin-top:0
     }
     .clock-ring.mode-done .clock-meta{
-      width:172px;margin-top:8px;padding:6px 10px;
-      border-radius:12px;font-size:9.8px;line-height:1.25
+      width:164px;margin-top:6px;padding:5px 9px;
+      border-radius:11px;font-size:9.1px;line-height:1.2
     }
     .clock-ring.mode-done .clock-detail-row{
       gap:6px;padding:1px 0
@@ -185,39 +191,56 @@
     .clock-ring.mode-done .clock-footer:after{width:14px}
 
     @media (max-width:390px){
-      .clock-ring.mode-done{width:264px;height:264px}
-      .clock-ring.mode-done .clock-icon{width:40px;height:40px;font-size:22px}
-      .clock-ring.mode-done .clock-time{font-size:40px}
-      .clock-ring.mode-done .clock-meta{width:164px;font-size:9.3px}
-      .clock-ring.mode-done .clock-footer{font-size:8.2px}
+      .clock-ring{width:238px;height:238px}
+      .clock-ring.mode-done{width:234px;height:234px}
+      .clock-ring.mode-done .clock-icon{width:37px;height:37px;font-size:20px}
+      .clock-ring.mode-done .clock-time{font-size:37px}
+      .clock-ring.mode-done .clock-meta{width:158px;font-size:8.8px}
+      .clock-ring.mode-done .clock-footer{font-size:7.9px}
     }
 
     .main-action{
-      width:100%;margin-top:22px;border:0;border-radius:18px;padding:17px 18px;
+      width:100%;margin-top:10px;border:0;border-radius:16px;padding:12px 14px;
       display:flex;align-items:center;justify-content:space-between;text-align:left;
       background:linear-gradient(135deg,#ff6f00,#ff8f22);color:white;
-      box-shadow:0 14px 28px rgba(255,122,0,.28)
+      box-shadow:0 11px 24px rgba(255,122,0,.24)
     }
-    .main-action strong{display:block;font-size:15px}
-    .main-action span{display:block;font-size:11.5px;margin-top:3px;color:#fff4e9}
-    .main-action .arrow{font-size:24px}
+    .main-action strong{display:block;font-size:13.5px}
+    .main-action span{display:block;font-size:10.3px;margin-top:2px;color:#fff4e9}
+    .main-action .arrow{font-size:21px}
 
-    .home-content{padding:20px 18px 0}
-    .section-head{display:flex;justify-content:space-between;align-items:center;margin:6px 0 12px}
-    .section-head h2{font-size:18px;margin:0;letter-spacing:-.25px}
-    .section-link{border:0;background:none;color:var(--muted);font-size:12px;font-weight:700}
+    .home-content{padding:10px 0 0;color:#fff}
+    .section-head{display:flex;justify-content:space-between;align-items:center;margin:0 2px 7px}
+    .section-head h2{font-size:12.5px;margin:0;letter-spacing:.05px;color:#dce8f1}
+    .section-link{border:0;background:none;color:#9fb5c7;font-size:9.5px;font-weight:750;padding:2px 0}
 
-    .summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+    .summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
     .summary-card{
-      background:#fff;border:1px solid #edf1f5;border-radius:18px;padding:14px 14px;
-      box-shadow:0 8px 22px rgba(22,38,58,.05)
+      min-width:0;background:rgba(255,255,255,.055);border:1px solid rgba(190,208,223,.15);
+      border-radius:11px;padding:7px 3px 6px;text-align:center;box-shadow:none
     }
-    .summary-label{font-size:11px;color:var(--muted);margin-bottom:5px}
-    .summary-value{font-size:20px;font-weight:900;letter-spacing:-.4px}
-    .summary-card.orange .summary-value{color:var(--orange)}
-    .summary-card.green .summary-value{color:var(--green-dark)}
-    .summary-card.blue .summary-value{color:#176ed0}
-    .summary-card.red .summary-value{color:#dd2e25}
+    .summary-label{font-size:7.8px;line-height:1.1;color:#9fb5c7;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .summary-value{font-size:14.5px;font-weight:900;letter-spacing:-.25px;color:#fff}
+    .summary-card.orange .summary-value{color:#ffad64}
+    .summary-card.green .summary-value{color:#55e4b2}
+    .summary-card.blue .summary-value{color:#7fc2ff}
+    .summary-card.red .summary-value{color:#ff918a}
+
+    @media (max-height:740px){
+      .home-hero{padding-top:calc(14px + env(safe-area-inset-top));padding-bottom:13px}
+      .brand-icon{width:45px;height:45px;border-radius:15px;font-size:21px}
+      .brand-title{font-size:19px}
+      .brand-sub{font-size:11.5px}
+      .greeting{margin-top:14px}
+      .hero-divider{margin-top:9px}
+      .clock-zone{margin-top:7px}
+      .clock-ring{width:222px;height:222px}
+      .clock-ring.mode-done{width:218px;height:218px}
+      .clock-ring.mode-done .clock-content{transform:translateY(-7px)}
+      .main-action{margin-top:7px;padding:10px 12px}
+      .home-content{padding-top:7px}
+      .sync-card{margin-top:7px;padding:8px 10px}
+    }
 
     .panel{
       margin:0 16px 16px;background:#fff;border-radius:24px;border:1px solid #edf1f5;
@@ -422,16 +445,7 @@
         </div>
       </div>
 
-      <div class="sync-card" onclick="handleSeniorCard()">
-        <div class="sync-left">
-          <div class="dot" id="seniorDot"></div>
-          <div>
-            <div class="sync-title" id="seniorTitle">Senior • integração em preparação</div>
-            <div class="sync-sub" id="seniorSub">Seu app está pronto para receber suas marcações automaticamente.</div>
-          </div>
-        </div>
-        <div class="senior-mark">Senior</div>
-      </div>
+      <div class="hero-divider" aria-hidden="true"></div>
 
       <div class="clock-zone">
         <div class="clock-ring" id="homeClockRing">
@@ -453,30 +467,41 @@
         </div>
         <div class="arrow">›</div>
       </button>
-    </div>
 
-    <div class="home-content">
-      <div class="section-head">
-        <h2>Resumo do dia</h2>
-        <button class="section-link" onclick="goView('history')">Ver histórico ›</button>
+      <div class="home-content">
+        <div class="section-head">
+          <h2>Marcações de hoje</h2>
+          <button class="section-link" onclick="goView('history')">Histórico ›</button>
+        </div>
+        <div class="summary-grid">
+          <div class="summary-card green">
+            <div class="summary-label">Entrada</div>
+            <div class="summary-value" id="sumEntry">--:--</div>
+          </div>
+          <div class="summary-card orange">
+            <div class="summary-label">Saída almoço</div>
+            <div class="summary-value" id="sumLunchOut">--:--</div>
+          </div>
+          <div class="summary-card blue">
+            <div class="summary-label">Retorno</div>
+            <div class="summary-value" id="sumReturn">--:--</div>
+          </div>
+          <div class="summary-card red">
+            <div class="summary-label">Saída</div>
+            <div class="summary-value" id="sumExit">--:--</div>
+          </div>
+        </div>
       </div>
-      <div class="summary-grid">
-        <div class="summary-card green">
-          <div class="summary-label">Entrada</div>
-          <div class="summary-value" id="sumEntry">--:--</div>
+
+      <div class="sync-card" onclick="handleSeniorCard()">
+        <div class="sync-left">
+          <div class="dot" id="seniorDot"></div>
+          <div>
+            <div class="sync-title" id="seniorTitle">Senior • integração em preparação</div>
+            <div class="sync-sub" id="seniorSub">Seu app está pronto para receber suas marcações automaticamente.</div>
+          </div>
         </div>
-        <div class="summary-card orange">
-          <div class="summary-label">Saída (almoço)</div>
-          <div class="summary-value" id="sumLunchOut">--:--</div>
-        </div>
-        <div class="summary-card blue">
-          <div class="summary-label">Retorno</div>
-          <div class="summary-value" id="sumReturn">--:--</div>
-        </div>
-        <div class="summary-card red">
-          <div class="summary-label">Saída</div>
-          <div class="summary-value" id="sumExit">--:--</div>
-        </div>
+        <div class="senior-mark">Senior</div>
       </div>
     </div>
   </section>
