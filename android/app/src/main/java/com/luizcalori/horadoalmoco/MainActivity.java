@@ -78,7 +78,7 @@ public class MainActivity extends Activity {
             "(function(){" +
             "function norm(s){return (s||'').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'');}" +
             "function timeMatches(s){" +
-            " var out=[],re=/(^|\\D)([01]?\\d|2[0-3]):([0-5]\\d)(?::[0-5]\\d)?(?=\\D|$)/g,m;" +
+            " var out=[],re=/(^|\\D)([01]?\\d|2[0-3]):([0-5]\\d):([0-5]\\d)(?=\\D|$)/g,m;" +
             " while((m=re.exec(s||''))!==null){var v=String(m[2]).padStart(2,'0')+':'+m[3];if(out.indexOf(v)<0)out.push(v);}" +
             " return out;" +
             "}" +
@@ -139,7 +139,7 @@ public class MainActivity extends Activity {
             " var scheduleEnd=scheduleMatch?(String(scheduleMatch[3]).padStart(2,'0')+':'+scheduleMatch[4]):null;" +
             " var scheduleBreak=scheduleMatch?scheduleMatch[5]:null;" +
             " var lines=bodyText.split(/\\n+/).map(function(x){return (x||'').trim();}).filter(Boolean),firstName=null;" +
-            " var esc=-1;for(var li=0;li<lines.length;li++){if(norm(lines[li]).toUpperCase()==='ESCALA DE TRABALHO'){esc=li;break;}}" +
+            " var esc=-1;for(var li=0;li<lines.length;li++){if(norm(lines[li]).toUpperCase().indexOf('ESCALA DE TRABALHO')>=0){esc=li;break;}}" +
             " if(esc>=0){" +
             "  var parts=[];" +
             "  for(var z=esc-1;z>=Math.max(0,esc-8);z--){" +
