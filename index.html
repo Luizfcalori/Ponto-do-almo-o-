@@ -500,9 +500,9 @@
       <div class="toggle-row" onclick="toggleNotify()">
         <div>
           <div class="toggle-label">🔔 Notificar no retorno</div>
-          <div class="setting-sub">Abra o relógio do Android com o horário preenchido.</div>
+          <div class="setting-sub">Avisos 3 min antes e no horário do retorno.</div>
         </div>
-        <div id="notifyToggle" class="toggle on"></div>
+        <div id="notifyToggle" class="toggle on" role="switch" aria-checked="true"></div>
       </div>
 
       <div class="manual-box">
@@ -602,6 +602,14 @@
           <div class="setting-sub">Os registros continuam armazenados neste navegador.</div>
         </div>
         <span class="pill">Ativo</span>
+      </div>
+
+      <div class="setting-row" onclick="toggleNotify()" style="cursor:pointer">
+        <div>
+          <div class="setting-title">Notificações do almoço</div>
+          <div class="setting-sub" id="profileNotifySub">Avisos 3 min antes e no horário do retorno.</div>
+        </div>
+        <div id="profileNotifyToggle" class="toggle on" role="switch" aria-label="Notificações do almoço" aria-checked="true"></div>
       </div>
 
       <div class="setting-row">
@@ -830,6 +838,7 @@
     if(name === 'history') mostrarHistorico();
     if(name === 'stats') atualizarEstatisticas();
     if(name === 'profile'){
+      syncNotificationUI();
       refreshAppVersionInfo();
       checkAppUpdate(false);
     }
@@ -1089,10 +1098,56 @@
     window.location.href = intentUrl;
   }
 
-  function toggleNotify(){
-    notifyEnabled = !notifyEnabled;
-    document.getElementById('notifyToggle').classList.toggle('on',notifyEnabled);
+  function syncNotificationUI(){
+    const lunchToggle = document.getElementById('notifyToggle');
+    const profileToggle = document.getElementById('profileNotifyToggle');
+    const profileSub = document.getElementById('profileNotifySub');
+
+    [lunchToggle,profileToggle].forEach(function(el){
+      if(!el) return;
+      el.classList.toggle('on',notifyEnabled);
+      el.setAttribute('aria-checked',notifyEnabled ? 'true' : 'false');
+    });
+
+    if(profileSub){
+      profileSub.textContent = notifyEnabled
+        ? 'Ligadas • avisos 3 min antes e no horário do retorno.'
+        : 'Desligadas • nenhum aviso será emitido.';
+    }
+  }
+
+  function setNotificationsEnabled(enabled,userInitiated){
+    notifyEnabled = !!enabled;
     localStorage.setItem('notifyEnabled',notifyEnabled ? '1' : '0');
+    syncNotificationUI();
+
+    if(!notifyEnabled){
+      if(returnNotificationTimer){
+        clearTimeout(returnNotificationTimer);
+        returnNotificationTimer = null;
+      }
+      if(window.AndroidSenior && typeof window.AndroidSenior.cancelReturnAlarms === 'function'){
+        window.AndroidSenior.cancelReturnAlarms();
+      }
+      if(userInitiated) showToast('Notificações do almoço desligadas.');
+      return;
+    }
+
+    if('Notification' in window && Notification.permission === 'default'){
+      Notification.requestPermission().catch(function(){});
+    }
+
+    let ativo = null;
+    try{ ativo = JSON.parse(localStorage.getItem('almocoAtivo') || 'null'); }catch(_){}
+    if(ativo && ativo.retorno){
+      scheduleReturnNotification(ativo.retorno);
+    }
+
+    if(userInitiated) showToast('Notificações do almoço ligadas.');
+  }
+
+  function toggleNotify(){
+    setNotificationsEnabled(!notifyEnabled,true);
   }
 
   function salvarHistorico(saida,retorno,dataRegistro,origem){
@@ -1190,7 +1245,10 @@
     document.getElementById('currentTime').textContent = '--:--';
 
     notifyEnabled = localStorage.getItem('notifyEnabled') !== '0';
-    document.getElementById('notifyToggle').classList.toggle('on',notifyEnabled);
+    syncNotificationUI();
+    if(!notifyEnabled && window.AndroidSenior && typeof window.AndroidSenior.cancelReturnAlarms === 'function'){
+      window.AndroidSenior.cancelReturnAlarms();
+    }
 
     // Ao abrir em um novo dia, nunca reaproveita batidas/intervalo do dia anterior.
     const hoje = new Date().toLocaleDateString('pt-BR');
@@ -1814,16 +1872,7 @@
     }
   }
 
-  const originalToggleNotify = toggleNotify;
-  toggleNotify = function(){
-    notifyEnabled = !notifyEnabled;
-    document.getElementById('notifyToggle').classList.toggle('on',notifyEnabled);
-    localStorage.setItem('notifyEnabled',notifyEnabled ? '1' : '0');
-
-    if(notifyEnabled && 'Notification' in window && Notification.permission === 'default'){
-      Notification.requestPermission().catch(function(){});
-    }
-  };
+  // O controle de notificações é compartilhado entre Almoço e Perfil.
 
   async function initSenior(){
     if(hasNativeSeniorBridge()){
