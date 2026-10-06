@@ -1263,11 +1263,19 @@
     }
 
     const seen = {};
-    return cleaned.filter(function(item){
+    cleaned = cleaned.filter(function(item){
       if(seen[item.time]) return false;
       seen[item.time] = true;
       return true;
-    }).map(function(item,index){
+    });
+
+    // Jornada normal: entrada, saída almoço, retorno, saída. Se a tela repetir
+    // comprovantes, preserva as três primeiras batidas e a última como saída.
+    if(cleaned.length > 4){
+      cleaned = [cleaned[0],cleaned[1],cleaned[2],cleaned[cleaned.length-1]];
+    }
+
+    return cleaned.map(function(item,index){
       return {id:'native-clean-' + index,time:item.time,day:(data && data.day) || '',origin:'Senior WebView'};
     });
   }
