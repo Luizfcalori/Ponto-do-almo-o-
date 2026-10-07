@@ -17,6 +17,9 @@
         <receiver
             android:name=".ReturnAlarmReceiver"
             android:exported="false" />
+        <receiver
+            android:name=".ClockAlarmCleanupReceiver"
+            android:exported="false" />
 
         <activity
             android:name=".MainActivity"
