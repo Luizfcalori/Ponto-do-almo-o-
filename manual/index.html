@@ -2873,6 +2873,7 @@
   function getExpectedSchedule(dateValue){
     const key = weekKeyForDate(dateValue);
     const weekly = loadWeeklySchedule();
+    const hasWeeklyPlan = Object.keys(weekly).length > 0;
     const day = weekly[key];
 
     if(day && (day.start || day.lunchOut || day.lunchReturn || day.end)){
@@ -2882,7 +2883,15 @@
         lunchOut:day.lunchOut || null,
         lunchReturn:day.lunchReturn || null,
         end:day.end || null,
-        weekly:true
+        weekly:true,off:false
+      };
+    }
+
+    if(hasWeeklyPlan){
+      return {
+        key:key,label:WEEK_DAY_LABELS[key],
+        start:null,lunchOut:null,lunchReturn:null,end:null,
+        weekly:true,off:true
       };
     }
 
@@ -2891,7 +2900,7 @@
       start:localStorage.getItem('manualScheduleStart') || null,
       lunchOut:null,lunchReturn:null,
       end:localStorage.getItem('manualScheduleEnd') || null,
-      weekly:false
+      weekly:false,off:false
     };
   }
 
@@ -2909,9 +2918,12 @@
       document.getElementById('mainActionTitle').textContent = 'Jornada de ' + schedule.label.toLowerCase();
       document.getElementById('mainActionSub').textContent =
         schedule.start + ' • almoço ' + schedule.lunchOut + '–' + schedule.lunchReturn + ' • saída ' + schedule.end;
+    } else if(schedule.off){
+      document.getElementById('mainActionTitle').textContent = 'Folga prevista • ' + schedule.label.toLowerCase();
+      document.getElementById('mainActionSub').textContent = 'Sem jornada configurada para hoje';
     } else {
-      document.getElementById('mainActionTitle').textContent = 'Jornada de ' + schedule.label.toLowerCase() + ' não configurada';
-      document.getElementById('mainActionSub').textContent = 'Toque para preencher os horários deste dia';
+      document.getElementById('mainActionTitle').textContent = 'Configure sua jornada semanal';
+      document.getElementById('mainActionSub').textContent = 'Defina os horários de segunda a domingo';
     }
     card.onclick = openManualScheduleModal;
   }
@@ -3451,8 +3463,9 @@
     applySeniorEvents(manualEvents(loadManualTimes()));
     updateManualClockUI();
     updateManualScheduleSummary();
+    const weekly = loadWeeklySchedule();
     const schedule = getExpectedSchedule();
-    if(!schedule.start || !schedule.lunchOut || !schedule.lunchReturn || !schedule.end){
+    if(Object.keys(weekly).length === 0 && (!schedule.start || !schedule.end)){
       setTimeout(openManualScheduleModal,450);
     }
   }
