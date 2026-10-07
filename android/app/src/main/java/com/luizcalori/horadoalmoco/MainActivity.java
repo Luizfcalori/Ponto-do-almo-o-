@@ -59,6 +59,7 @@ public class MainActivity extends Activity {
     private boolean seniorVisible = false;
     private long updateDownloadId = -1L;
     private String pendingUpdateUrl = null;
+    private String activeUpdateUrl = null;
     private BroadcastReceiver updateDownloadReceiver;
 
     private final String EXPAND_RECEIPTS_JS =
@@ -642,7 +643,28 @@ public class MainActivity extends Activity {
                 if (!DownloadManager.ACTION_DOWNLOAD_COMPLETE.equals(intent.getAction())) return;
                 long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1L);
                 if (id != updateDownloadId) return;
-                openDownloadedUpdate(id);
+
+                DownloadManager manager = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
+                if (manager == null) {
+                    openUpdateFallback(activeUpdateUrl, "O download interno não pôde ser verificado.");
+                    return;
+                }
+
+                DownloadManager.Query query = new DownloadManager.Query().setFilterById(id);
+                try (android.database.Cursor cursor = manager.query(query)) {
+                    if (cursor != null && cursor.moveToFirst()) {
+                        int status = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS));
+                        if (status == DownloadManager.STATUS_SUCCESSFUL) {
+                            openDownloadedUpdate(id);
+                            return;
+                        }
+                        int reason = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_REASON));
+                        openUpdateFallback(activeUpdateUrl, "O download interno falhou (" + reason + ").");
+                        return;
+                    }
+                } catch (Exception ignored) {}
+
+                openUpdateFallback(activeUpdateUrl, "O download interno não foi concluído.");
             }
         };
 
@@ -685,6 +707,7 @@ public class MainActivity extends Activity {
     }
 
     private void startAppUpdate(String url) {
+        activeUpdateUrl = url;
         if (url == null || url.isBlank() || !url.startsWith("https://")) {
             sendUpdaterStatus("error", "Endereço de atualização inválido.");
             return;
@@ -712,10 +735,11 @@ public class MainActivity extends Activity {
     }
 
     private void beginUpdateDownload(String url) {
+        activeUpdateUrl = url;
         try {
             DownloadManager manager = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
             if (manager == null) {
-                sendUpdaterStatus("error", "Serviço de download indisponível.");
+                openUpdateFallback(url, "Serviço de download indisponível.");
                 return;
             }
 
@@ -738,7 +762,27 @@ public class MainActivity extends Activity {
             updateDownloadId = manager.enqueue(request);
             sendUpdaterStatus("downloading", "Baixando a atualização...");
         } catch (Exception e) {
-            sendUpdaterStatus("error", "Não foi possível iniciar o download da atualização.");
+            openUpdateFallback(url, "Não foi possível iniciar o download interno.");
+        }
+    }
+
+    private void openUpdateFallback(String url, String reason) {
+        if (url == null || url.isBlank()) {
+            sendUpdaterStatus("error", reason == null ? "Atualização indisponível." : reason);
+            return;
+        }
+
+        try {
+            sendUpdaterStatus(
+                    "browser_fallback",
+                    (reason == null ? "Atualizador interno indisponível." : reason) +
+                            " Abrindo o download direto no navegador."
+            );
+            Intent browser = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+            browser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(browser);
+        } catch (Exception e) {
+            sendUpdaterStatus("error", "Não consegui abrir nem o atualizador interno nem o download direto.");
         }
     }
 
@@ -749,7 +793,7 @@ public class MainActivity extends Activity {
 
             Uri apkUri = manager.getUriForDownloadedFile(downloadId);
             if (apkUri == null) {
-                sendUpdaterStatus("error", "O download da atualização não foi concluído.");
+                openUpdateFallback(activeUpdateUrl, "O download da atualização não foi concluído.");
                 return;
             }
 
@@ -760,7 +804,7 @@ public class MainActivity extends Activity {
             sendUpdaterStatus("installer", "Download concluído. Confirme a atualização no Android.");
             startActivity(install);
         } catch (Exception e) {
-            sendUpdaterStatus("error", "Não consegui abrir o instalador da atualização.");
+            openUpdateFallback(activeUpdateUrl, "Não consegui abrir o instalador interno.");
         }
     }
 
@@ -940,6 +984,11 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void installUpdate(String url) {
             runOnUiThread(() -> startAppUpdate(url));
+        }
+
+        @JavascriptInterface
+        public void openUpdateLink(String url) {
+            runOnUiThread(() -> openUpdateFallback(url, "Download direto solicitado."));
         }
 
         @JavascriptInterface
