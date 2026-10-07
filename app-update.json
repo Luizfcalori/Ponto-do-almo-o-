@@ -1,6 +1,6 @@
 {
-  "versionName": "2.1.2",
-  "versionCode": 11,
-  "apkUrl": "https://github.com/Luizfcalori/Ponto-do-almo-o-/releases/download/v2.1.2/Hora-do-Almoco-Senior.apk",
-  "notes": "Novo ícone oficial do Hora do Almoço."
+  "versionName": "2.1.4",
+  "versionCode": 13,
+  "apkUrl": "https://github.com/Luizfcalori/Ponto-do-almo-o-/releases/download/v2.1.4/Hora-do-Almoco-Senior.apk",
+  "notes": "Adiciona alerta visual de atualização pendente no Perfil e inicia automaticamente o download, abrindo o instalador quando a nova versão estiver pronta."
 }
