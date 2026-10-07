@@ -735,7 +735,7 @@
       <div class="toggle-row" onclick="toggleNotify()">
         <div>
           <div class="toggle-label">🔔 Notificar no retorno</div>
-          <div class="setting-sub">Avisos 3 min antes e no horário do retorno.</div>
+          <div class="setting-sub">Alarmes 3 min antes e no horário do retorno.</div>
         </div>
         <div id="notifyToggle" class="toggle on" role="switch" aria-checked="true"></div>
       </div>
@@ -950,10 +950,10 @@
 
       <div class="setting-row" onclick="toggleNotify()" style="cursor:pointer">
         <div>
-          <div class="setting-title">Notificações do almoço</div>
-          <div class="setting-sub" id="profileNotifySub">Avisos 3 min antes e no horário do retorno.</div>
+          <div class="setting-title">Alarmes do almoço</div>
+          <div class="setting-sub" id="profileNotifySub">Alarmes 3 min antes e no horário do retorno.</div>
         </div>
-        <div id="profileNotifyToggle" class="toggle on" role="switch" aria-label="Notificações do almoço" aria-checked="true"></div>
+        <div id="profileNotifyToggle" class="toggle on" role="switch" aria-label="Alarmes do almoço" aria-checked="true"></div>
       </div>
 
       <div class="setting-row" id="appUpdateRow" onclick="handleUpdateRowClick()" style="cursor:pointer">
@@ -1748,7 +1748,7 @@
       if(window.AndroidSenior && typeof window.AndroidSenior.cancelReturnAlarms === 'function'){
         window.AndroidSenior.cancelReturnAlarms();
       }
-      if(userInitiated) showToast('Notificações do almoço desligadas.');
+      if(userInitiated) showToast('Alarmes do almoço desligadas.');
       return;
     }
 
@@ -1762,7 +1762,7 @@
       scheduleReturnNotification(ativo.retorno);
     }
 
-    if(userInitiated) showToast('Notificações do almoço ligadas.');
+    if(userInitiated) showToast('Alarmes do almoço ligadas.');
   }
 
   function toggleNotify(){

@@ -125,7 +125,7 @@ jobs:
           VERSION_NAME: ${{ steps.version.outputs.name }}
         run: |
           TAG="v$VERSION_NAME"
-          NOTES="Controle de Ponto $VERSION_NAME: corrige o atualizador e adiciona download direto de segurança."
+          NOTES="Controle de Ponto $VERSION_NAME: cria alarmes reais do sistema para o retorno do almoço, além do alerta interno."
 
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" Controle-de-Ponto-Senior.apk Controle-de-Ponto-Senior.apk.sha256 --clobber
@@ -155,7 +155,7 @@ jobs:
             --arg versionName "$VERSION_NAME" \
             --argjson versionCode "$VERSION_CODE" \
             --arg apkUrl "$APK_URL" \
-            --arg notes "Corrige o download de atualizações e adiciona rota direta pelo navegador." \
+            --arg notes "Cria alarmes reais do sistema para o retorno do almoço e melhora integração com smartwatch pareado." \
             '{versionName:$versionName,versionCode:$versionCode,apkUrl:$apkUrl,notes:$notes}' \
             > app-update.json
 

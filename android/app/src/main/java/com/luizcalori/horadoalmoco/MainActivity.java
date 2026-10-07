@@ -19,6 +19,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
+import android.provider.AlarmClock;
 import android.provider.Settings;
 import android.view.Gravity;
 import android.view.View;
@@ -835,6 +836,24 @@ public class MainActivity extends Activity {
         }
     }
 
+    private void createSystemClockAlarm(long triggerAtMillis, String message) {
+        try {
+            Calendar when = Calendar.getInstance();
+            when.setTimeInMillis(triggerAtMillis);
+
+            Intent alarmIntent = new Intent(AlarmClock.ACTION_SET_ALARM);
+            alarmIntent.putExtra(AlarmClock.EXTRA_HOUR, when.get(Calendar.HOUR_OF_DAY));
+            alarmIntent.putExtra(AlarmClock.EXTRA_MINUTES, when.get(Calendar.MINUTE));
+            alarmIntent.putExtra(AlarmClock.EXTRA_MESSAGE, message);
+            alarmIntent.putExtra(AlarmClock.EXTRA_SKIP_UI, true);
+            alarmIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+
+            if (alarmIntent.resolveActivity(getPackageManager()) != null) {
+                startActivity(alarmIntent);
+            }
+        } catch (Exception ignored) {}
+    }
+
     private void scheduleNativeReturnAlarms(String returnTime) {
         try {
             String[] parts = returnTime.split(":");
@@ -857,7 +876,12 @@ public class MainActivity extends Activity {
 
             long exactAt = exact.getTimeInMillis();
             long beforeAt = exactAt - (3L * 60L * 1000L);
+
+            // Além do alerta interno, cria alarmes reais no app Relógio do Android.
+            // Em aparelhos/relógios pareados que sincronizam alarmes do telefone,
+            // isso permite que o smartwatch toque como alarme, não só como notificação.
             if (beforeAt > System.currentTimeMillis()) {
+                createSystemClockAlarm(beforeAt, "Controle de Ponto • faltam 3 minutos");
                 scheduleOneReturnAlarm(
                         beforeAt,
                         7301,
@@ -866,6 +890,7 @@ public class MainActivity extends Activity {
                 );
             }
 
+            createSystemClockAlarm(exactAt, "Controle de Ponto • hora de retornar");
             scheduleOneReturnAlarm(
                     exactAt,
                     7302,
