@@ -16,3 +16,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "HoraDoAlmoco"
 include(":app")
+include(":manualapp")
