@@ -1,6 +1,6 @@
 {
-  "versionName": "2.2.0",
-  "versionCode": 14,
-  "apkUrl": "https://github.com/Luizfcalori/Ponto-do-almo-o-/releases/download/v2.2.0/Controle-de-Ponto-Senior.apk",
-  "notes": "Nova identidade visual do Controle de Ponto, com novo nome, logo e ícone de relógio."
+  "versionName": "2.2.1",
+  "versionCode": 15,
+  "apkUrl": "https://github.com/Luizfcalori/Ponto-do-almo-o-/releases/download/v2.2.1/Controle-de-Ponto-Senior.apk",
+  "notes": "Corrige o retorno do almoço: a previsão continua visível, mas o campo Retorno e o histórico só recebem a 3ª marcação real da Senior."
 }

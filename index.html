@@ -1608,11 +1608,12 @@
     document.getElementById('lunchHeroTitle').textContent = 'Almoço iniciado!';
     document.getElementById('lunchHeroText').textContent = 'Sua saída foi registrada no Controle de Ponto e o retorno já foi calculado.';
     document.getElementById('sumLunchOut').textContent = valor;
-    document.getElementById('sumReturn').textContent = retorno;
+    document.getElementById('sumReturn').textContent = '--:--';
     renderLunchClock(valor,retorno);
 
-    salvarHistorico(valor,retorno);
-    localStorage.setItem('almocoAtivo',JSON.stringify({saida:valor,retorno:retorno,data:new Date().toISOString()}));
+    // Neste app automático, retorno calculado é apenas PREVISÃO.
+    // O histórico e o campo Retorno só recebem valor quando a Senior trouxer a 3ª batida.
+    localStorage.setItem('almocoAtivo',JSON.stringify({saida:valor,retorno:retorno,data:new Date().toISOString(),previsto:true}));
     atualizarProgresso();
     showToast('Retorno calculado para ' + retorno + '.');
 
@@ -2322,7 +2323,7 @@
       document.getElementById('lunchHeroTitle').textContent = 'Almoço iniciado!';
       document.getElementById('lunchHeroText').textContent = 'Seu último horário de almoço está sendo acompanhado neste aparelho.';
       document.getElementById('sumLunchOut').textContent = ativo.saida;
-      document.getElementById('sumReturn').textContent = ativo.retorno;
+      document.getElementById('sumReturn').textContent = '--:--';
       renderLunchClock(ativo.saida,ativo.retorno);
       setGreetingMessage('Bom almoço!');
 
@@ -2334,7 +2335,8 @@
     const hist = JSON.parse(localStorage.getItem('historicoAlmoco') || '[]');
     if(hist.length && hist[0].data === hoje && hist[0].origem !== 'Senior'){
       document.getElementById('sumLunchOut').textContent = hist[0].saida || '--:--';
-      document.getElementById('sumReturn').textContent = hist[0].retorno || '--:--';
+      // No modo automático, retorno nunca é restaurado de cálculo local.
+      document.getElementById('sumReturn').textContent = '--:--';
     }
 
     refreshIntervalUI();
@@ -2657,7 +2659,8 @@
       saida:saida,
       retorno:retorno,
       data:new Date().toISOString(),
-      origem:'Senior'
+      origem:'Senior',
+      previsto:true
     }));
 
     document.getElementById('exitTime').value = saida;
@@ -2668,21 +2671,22 @@
     document.getElementById('progressCard').style.display = 'block';
     document.getElementById('lunchHeroTitle').textContent = 'Almoço detectado pela Senior!';
     document.getElementById('lunchHeroText').textContent =
-      'Sua saída foi reconhecida automaticamente e o retorno foi calculado com ' +
-      formatIntervalDuration(getLunchIntervalMinutes()) + ' de intervalo.';
+      'Sua saída foi reconhecida automaticamente. O horário abaixo é apenas uma previsão; o retorno real será lido da Senior.';
     document.getElementById('sumLunchOut').textContent = saida;
-    document.getElementById('sumReturn').textContent = retorno;
+    document.getElementById('sumReturn').textContent = '--:--';
     renderLunchClock(saida,retorno);
 
     const rp = retorno.split(':').map(Number);
     ultimoRetornoHora = rp[0];
     ultimoRetornoMinuto = rp[1];
 
-    salvarHistorico(saida,retorno);
+    // Não grava o retorno previsto no histórico como se fosse ponto.
+    // salvarHistoricoJornada(), chamado pela sincronização, já mantém a saída de almoço
+    // e deixa retorno nulo até chegar a 3ª marcação real da Senior.
     atualizarProgresso();
     if(notifyEnabled) scheduleReturnNotification(retorno);
 
-    showToast('Senior detectou sua saída às ' + saida + '. Retorno: ' + retorno + '.');
+    showToast('Senior detectou sua saída às ' + saida + '. Retorno previsto: ' + retorno + '.');
   }
 
   function minutesFromTime(value){
@@ -2829,13 +2833,9 @@
     document.getElementById('sumEntry').textContent = entry || '--:--';
     document.getElementById('sumLunchOut').textContent = lunchOut || '--:--';
 
-    if(lunchReturn){
-      document.getElementById('sumReturn').textContent = lunchReturn;
-    } else if(lunchOut){
-      document.getElementById('sumReturn').textContent = calcReturnFromTime(lunchOut) || '--:--';
-    } else {
-      document.getElementById('sumReturn').textContent = '--:--';
-    }
+    // O card "Retorno" representa exclusivamente a 3ª batida real da Senior.
+    // A previsão continua visível no relógio/card de almoço, mas nunca vira marcação.
+    document.getElementById('sumReturn').textContent = lunchReturn || '--:--';
 
     document.getElementById('sumExit').textContent = exit || '--:--';
 
