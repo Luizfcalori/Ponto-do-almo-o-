@@ -178,6 +178,9 @@ public class MainActivity extends Activity {
             "   if(!rt||rt.length>5000)continue;" +
             "   if(rt.indexOf(today)<0&&rt.indexOf(todayShort)<0)continue;" +
             "   if(rn.indexOf('ULTIMA ATUALIZACAO')>=0||rn.indexOf('ESCALA DE TRABALHO')>=0)continue;" +
+            "   var rd=(rt.match(/\\b\\d{2}\\/\\d{2}(?:\\/\\d{4})?\\b/g)||[]),ro=false;" +
+            "   for(var ri=0;ri<rd.length;ri++){if(rd[ri].indexOf(todayShort)!==0){ro=true;break;}}" +
+            "   if(ro)continue;" +
             "   var rtm=timeMatches(rt);" +
             "   if(!rtm.length||rtm.length>8)continue;" +
             "   if(rtm.length>bestCount||(rtm.length===bestCount&&rt.length<bestLen)){best=rt;bestCount=rtm.length;bestLen=rt.length;}" +
@@ -221,6 +224,23 @@ public class MainActivity extends Activity {
             "  return null;" +
             " }" +
             " var firstName=extractFirstName(bodyText);" +
+            " var explicitEmpty=false;" +
+            " try{" +
+            "  var emptyRows=[].slice.call(d.querySelectorAll('tr,[role=row],li,section,article,div'));" +
+            "  for(var er=0;er<emptyRows.length;er++){" +
+            "   var et=(emptyRows[er].innerText||'').trim(),en=norm(et).toUpperCase();" +
+            "   if(!et||et.length>2500)continue;" +
+            "   if(et.indexOf(today)<0&&et.indexOf(todayShort)<0)continue;" +
+            "   if(en.indexOf('NENHUMA MARCACAO ENCONTRADA')<0)continue;" +
+            "   var ed=(et.match(/\\b\\d{2}\\/\\d{2}(?:\\/\\d{4})?\\b/g)||[]),eo=false;" +
+            "   for(var ei=0;ei<ed.length;ei++){if(ed[ei].indexOf(todayShort)!==0){eo=true;break;}}" +
+            "   if(eo)continue;" +
+            "   explicitEmpty=true;break;" +
+            "  }" +
+            " }catch(e){}" +
+            " if(explicitEmpty){" +
+            "  return JSON.stringify({ok:true,empty:true,loggedIn:true,day:today,times:[],message:'Nenhuma marcação encontrada hoje.',frame:di,firstName:firstName,scheduleStart:scheduleStart,scheduleEnd:scheduleEnd,scheduleBreak:scheduleBreak});" +
+            " }" +
             " var todayBlock=findTodayBlock(d,h,today,todayShort),times=[],evidence=[];" +
             " if(todayBlock){" +
             "  var todays=timeMatches(todayBlock);" +
@@ -236,6 +256,9 @@ public class MainActivity extends Activity {
             "  var hasDate=t.indexOf(today)>=0 || t.indexOf(todayShort)>=0;" +
             "  var looksReceipt=/COMPROVANTE|MARCACAO|DATA|HORA|NSR|LOCAL|ORIGEM|REGISTRO/.test(nt);" +
             "  if(!hasDate)continue;" +
+            "  var td=(t.match(/\\b\\d{2}\\/\\d{2}(?:\\/\\d{4})?\\b/g)||[]),to=false;" +
+            "  for(var ti=0;ti<td.length;ti++){if(td[ti].indexOf(todayShort)!==0){to=true;break;}}" +
+            "  if(to)continue;" +
             "  var tm=timeMatches(t);" +
             "  for(var j=0;j<tm.length;j++){" +
             "   var v=tm[j];" +
