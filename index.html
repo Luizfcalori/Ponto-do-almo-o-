@@ -2632,11 +2632,21 @@
     return getExpectedSchedule().end;
   }
 
-  function updateScheduledWorkCard(){
+  function updateScheduledWorkCard(entry){
     const schedule = getExpectedSchedule();
-    document.getElementById('mainActionTitle').textContent = 'Saída prevista do trabalho';
-    document.getElementById('mainActionSub').textContent =
-      'Prevista para ' + schedule.end + ' • entrada prevista ' + schedule.start;
+    const title = document.getElementById('mainActionTitle');
+    const sub = document.getElementById('mainActionSub');
+
+    if(entry){
+      title.textContent = 'Saída prevista do trabalho';
+      sub.textContent =
+        'Prevista para ' + schedule.end + ' • entrada registrada ' + entry;
+    } else {
+      title.textContent = 'Entrada prevista do trabalho';
+      sub.textContent =
+        'Prevista para ' + schedule.start + ' • saída prevista ' + schedule.end;
+    }
+
     document.querySelector('.main-action').onclick = function(){ goView('home'); };
   }
 
@@ -2767,7 +2777,7 @@
 
     // O relógio central exibe informação contextual, nunca a hora atual.
     resetHomeClockVisual();
-    updateScheduledWorkCard();
+    updateScheduledWorkCard(entry);
 
     if(!entry){
       setClockRingProgress(0);
