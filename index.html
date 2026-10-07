@@ -204,14 +204,14 @@
     }
 
     .main-action{
-      width:100%;margin-top:10px;border:0;border-radius:16px;padding:12px 14px;
+      width:100%;margin-top:10px;border:1px solid rgba(226,232,240,.96);border-radius:16px;padding:12px 14px;
       display:flex;align-items:center;justify-content:space-between;text-align:left;
-      background:linear-gradient(135deg,#ff6f00,#ff8f22);color:white;
-      box-shadow:0 11px 24px rgba(255,122,0,.24)
+      background:#fff;color:#0f172a;
+      box-shadow:0 10px 24px rgba(2,12,27,.14)
     }
-    .main-action strong{display:block;font-size:13.5px}
-    .main-action span{display:block;font-size:10.3px;margin-top:2px;color:#fff4e9}
-    .main-action .arrow{font-size:21px}
+    .main-action strong{display:block;font-size:13.5px;color:#0f172a}
+    .main-action span{display:block;font-size:10.3px;margin-top:2px;color:#64748b}
+    .main-action .arrow{font-size:21px;color:#0f8f5d}
 
     .home-content{padding:10px 0 0;color:#fff}
     .section-head{display:flex;justify-content:space-between;align-items:center;margin:0 2px 7px}
@@ -464,14 +464,6 @@
         </div>
       </div>
 
-      <button class="main-action" onclick="goView('home')">
-        <div>
-          <strong id="mainActionTitle">Saída prevista do trabalho</strong>
-          <span id="mainActionSub">Prevista para --:-- • entrada prevista --:--</span>
-        </div>
-        <div class="arrow">›</div>
-      </button>
-
       <div class="home-content">
         <div class="section-head">
           <h2>Marcações de hoje</h2>
@@ -496,6 +488,14 @@
           </div>
         </div>
       </div>
+
+      <button class="main-action" onclick="goView('home')">
+        <div>
+          <strong id="mainActionTitle">Saída prevista do trabalho</strong>
+          <span id="mainActionSub">Prevista para --:-- • entrada prevista --:--</span>
+        </div>
+        <div class="arrow">›</div>
+      </button>
 
       <div class="sync-card" onclick="handleSeniorCard()">
         <div class="sync-left">
