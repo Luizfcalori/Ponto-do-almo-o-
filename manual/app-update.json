@@ -1,6 +1,6 @@
 {
-  "versionName": "1.0.3",
-  "versionCode": 4,
-  "apkUrl": "https://github.com/Luizfcalori/Ponto-do-almo-o-/releases/download/manual-v1.0.3/Hora-do-Almoco-Manual.apk",
-  "notes": "Jornada semanal configurável de segunda a domingo, com Entrada, Saída para almoço, Retorno e Saída em cada dia."
+  "versionName": "1.0.4",
+  "versionCode": 5,
+  "apkUrl": "https://github.com/Luizfcalori/Ponto-do-almo-o-/releases/download/manual-v1.0.4/Hora-do-Almoco-Manual.apk",
+  "notes": "Correção da limpeza do histórico: apaga também as marcações manuais salvas e não recria o histórico ao atualizar a página."
 }
