@@ -162,6 +162,7 @@ public class MainActivity extends Activity {
             "    var txt=(p.innerText||'').trim(),nt=norm(txt).toUpperCase();" +
             "    if(!txt||txt.length>9000)continue;" +
             "    if(nt.indexOf('ULTIMA ATUALIZACAO')>=0||nt.indexOf('ESCALA DE TRABALHO')>=0)continue;" +
+            "    if(/NENHUMA MARCACAO ENCONTRADA|ONIBUS|TRANSPORTE|FRETADO/.test(nt))continue;" +
             "    var tm=timeMatches(txt);" +
             "    if(!tm.length||tm.length>8)continue;" +
             "    var dateHits=(txt.match(/\\b\\d{2}\\/\\d{2}(?:\\/\\d{4})?\\b/g)||[]);" +
@@ -178,6 +179,7 @@ public class MainActivity extends Activity {
             "   if(!rt||rt.length>5000)continue;" +
             "   if(rt.indexOf(today)<0&&rt.indexOf(todayShort)<0)continue;" +
             "   if(rn.indexOf('ULTIMA ATUALIZACAO')>=0||rn.indexOf('ESCALA DE TRABALHO')>=0)continue;" +
+            "   if(/NENHUMA MARCACAO ENCONTRADA|ONIBUS|TRANSPORTE|FRETADO/.test(rn))continue;" +
             "   var rd=(rt.match(/\\b\\d{2}\\/\\d{2}(?:\\/\\d{4})?\\b/g)||[]),ro=false;" +
             "   for(var ri=0;ri<rd.length;ri++){if(rd[ri].indexOf(todayShort)!==0){ro=true;break;}}" +
             "   if(ro)continue;" +
@@ -224,6 +226,28 @@ public class MainActivity extends Activity {
             "  return null;" +
             " }" +
             " var firstName=extractFirstName(bodyText);" +
+            " try{" +
+            "  var exactRows=[].slice.call(d.querySelectorAll('tr,[role=row]'));" +
+            "  for(var xr=0;xr<exactRows.length;xr++){" +
+            "   var xt=(exactRows[xr].innerText||'').trim(),xn=norm(xt).toUpperCase();" +
+            "   if(!xt||xt.length>3500)continue;" +
+            "   if(xt.indexOf(today)<0&&xt.indexOf(todayShort)<0)continue;" +
+            "   var xd=(xt.match(/\\b\\d{2}\\/\\d{2}(?:\\/\\d{4})?\\b/g)||[]),xo=false;" +
+            "   for(var xi=0;xi<xd.length;xi++){if(xd[xi].indexOf(todayShort)!==0){xo=true;break;}}" +
+            "   if(xo)continue;" +
+            "   if(xn.indexOf('NENHUMA MARCACAO ENCONTRADA')>=0){" +
+            "    return JSON.stringify({ok:true,empty:true,loggedIn:true,day:today,times:[],message:'Nenhuma marcação encontrada hoje.',frame:di,evidence:[xt.slice(0,500)],firstName:firstName,scheduleStart:scheduleStart,scheduleEnd:scheduleEnd,scheduleBreak:scheduleBreak});" +
+            "   }" +
+            "   var receiptCount=0,clickables=[].slice.call(exactRows[xr].querySelectorAll('button,a,[role=button]'));" +
+            "   for(var xc=0;xc<clickables.length;xc++){if(norm(clickables[xc].innerText||'').toUpperCase().indexOf('COMPROVANTE')>=0)receiptCount++;}" +
+            "   var xtimes=timeMatches(xt);" +
+            "   if(receiptCount>0&&xtimes.length>0){" +
+            "    if(xtimes.length>4)xtimes=[xtimes[0],xtimes[1],xtimes[2],xtimes[xtimes.length-1]];" +
+            "    var xe=[];for(var xv=0;xv<xtimes.length;xv++)xe.push(xt.slice(0,700));" +
+            "    return JSON.stringify({ok:true,empty:false,loggedIn:true,day:today,times:xtimes,message:'Marcações de hoje lidas nos comprovantes.',frame:di,evidence:xe,firstName:firstName,scheduleStart:scheduleStart,scheduleEnd:scheduleEnd,scheduleBreak:scheduleBreak});" +
+            "   }" +
+            "  }" +
+            " }catch(e){}" +
             " var explicitEmpty=false;" +
             " try{" +
             "  var emptyRows=[].slice.call(d.querySelectorAll('tr,[role=row],li,section,article,div'));" +
@@ -256,6 +280,7 @@ public class MainActivity extends Activity {
             "  var hasDate=t.indexOf(today)>=0 || t.indexOf(todayShort)>=0;" +
             "  var looksReceipt=/COMPROVANTE|MARCACAO|DATA|HORA|NSR|LOCAL|ORIGEM|REGISTRO/.test(nt);" +
             "  if(!hasDate)continue;" +
+            "  if(/NENHUMA MARCACAO ENCONTRADA|ONIBUS|TRANSPORTE|FRETADO/.test(nt))continue;" +
             "  var td=(t.match(/\\b\\d{2}\\/\\d{2}(?:\\/\\d{4})?\\b/g)||[]),to=false;" +
             "  for(var ti=0;ti<td.length;ti++){if(td[ti].indexOf(todayShort)!==0){to=true;break;}}" +
             "  if(to)continue;" +
