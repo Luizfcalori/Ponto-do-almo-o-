@@ -2231,6 +2231,11 @@
       }
     }
 
+    if(ativo && ativo.origem === 'Senior'){
+      localStorage.removeItem('almocoAtivo');
+      ativo = null;
+    }
+
     if(ativo){
       document.getElementById('exitTime').value = ativo.saida;
       document.getElementById('lunchOutBig').textContent = ativo.saida;
@@ -2251,7 +2256,7 @@
     }
 
     const hist = JSON.parse(localStorage.getItem('historicoAlmoco') || '[]');
-    if(hist.length && hist[0].data === hoje){
+    if(hist.length && hist[0].data === hoje && hist[0].origem !== 'Senior'){
       document.getElementById('sumLunchOut').textContent = hist[0].saida || '--:--';
       document.getElementById('sumReturn').textContent = hist[0].retorno || '--:--';
     }
@@ -2280,6 +2285,11 @@
       if(data.state === 'login_required'){
         setSeniorVisual('disconnected','Toque aqui para abrir a Senior e entrar na sua conta.');
       } else if(data.state === 'loading'){
+        try{
+          const active = JSON.parse(localStorage.getItem('almocoAtivo') || 'null');
+          if(active && active.origem === 'Senior') localStorage.removeItem('almocoAtivo');
+        }catch(_){}
+        applySeniorEvents([]);
         setSeniorVisual('connected','Abrindo seus comprovantes na Senior...');
       } else if(data.state === 'ready'){
         setSeniorVisual('connected',data.message || 'Senior pronta para leitura das suas marcações.');
@@ -2362,8 +2372,11 @@
       const evidenceText = Array.isArray(data.evidence)
         ? data.evidence.join(' ').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase()
         : '';
+      const onlyRejectedTimes =
+        Array.isArray(data.times) && data.times.length > 0 && events.length === 0;
       const explicitlyEmpty = data.empty === true ||
-        evidenceText.indexOf('NENHUMA MARCACAO ENCONTRADA') >= 0;
+        evidenceText.indexOf('NENHUMA MARCACAO ENCONTRADA') >= 0 ||
+        onlyRejectedTimes;
       let cached = [];
       try{ cached = JSON.parse(localStorage.getItem(cacheKey) || '[]'); }catch(_){ cached = []; }
 
@@ -2661,6 +2674,12 @@
       return {time:time,evidence:String(evidence[index] || '')};
     });
 
+    cleaned = cleaned.filter(function(item){
+      const txt = item.evidence.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
+      if(/ONIBUS|TRANSPORTE|FRETADO|NENHUMA MARCACAO ENCONTRADA/.test(txt)) return false;
+      return true;
+    });
+
     // A Senior também mostra 08:00-18:00 e 1:12 na mesma tela.
     // Quando vierem mais de 4 horários, remove os valores da escala que não são batidas.
     if(cleaned.length > 4){
@@ -2794,6 +2813,11 @@
 
   async function syncSeniorClockings(showFeedback){
     if(hasNativeSeniorBridge()){
+      try{
+        const active = JSON.parse(localStorage.getItem('almocoAtivo') || 'null');
+        if(active && active.origem === 'Senior') localStorage.removeItem('almocoAtivo');
+      }catch(_){}
+      applySeniorEvents([]);
       setSeniorVisual('connected','Lendo seus comprovantes pela Senior...');
       window.AndroidSenior.syncNow();
       if(showFeedback) showToast('Atualizando marcações pela Senior...');
