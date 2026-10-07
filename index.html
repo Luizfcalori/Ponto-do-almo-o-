@@ -312,18 +312,82 @@
     .quick-row{gap:8px;margin-top:9px}
     .quick-btn{flex:1;border:1px solid #dde4ec;background:#fff;border-radius:12px;padding:10px;font-size:11px;font-weight:800;color:#334155}
 
-    .history-list{margin-top:2px}
-    .history-item{
-      display:grid;grid-template-columns:48px 1fr auto;gap:12px;align-items:center;
-      padding:14px 2px;border-bottom:1px solid #edf1f5
+    .history-shell{padding:16px 16px 8px}
+    .history-overview{
+      display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:13px
     }
-    .history-dot{
-      width:42px;height:42px;border-radius:14px;display:grid;place-items:center;background:#fff2e5;color:var(--orange);font-size:20px
+    .history-kpi{
+      background:#fff;border:1px solid #e8eef4;border-radius:17px;padding:12px 10px;
+      box-shadow:0 7px 22px rgba(15,23,42,.045);min-width:0
     }
-    .history-date{font-size:12px;color:var(--muted);margin-bottom:4px}
-    .history-main{font-size:14px;font-weight:850}
-    .history-return{font-size:17px;font-weight:950;color:var(--green-dark)}
-    .empty{text-align:center;color:var(--muted);padding:28px 14px;font-size:13px}
+    .history-kpi-label{font-size:9px;color:var(--muted);font-weight:750;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .history-kpi-value{font-size:18px;font-weight:950;color:#0f172a;margin-top:4px;letter-spacing:-.35px}
+    .history-kpi-value.green{color:var(--green-dark)}
+    .history-kpi-value.orange{color:var(--orange)}
+    .history-filter{
+      display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:#eaf0f5;
+      padding:4px;border-radius:14px;margin-bottom:13px
+    }
+    .history-filter-btn{
+      border:0;background:transparent;border-radius:10px;padding:8px 4px;color:#64748b;
+      font-size:10.5px;font-weight:850;transition:.18s
+    }
+    .history-filter-btn.active{
+      background:#fff;color:#0f172a;box-shadow:0 3px 10px rgba(15,23,42,.08)
+    }
+    .history-list{display:grid;gap:11px}
+    .history-day-card{
+      background:#fff;border:1px solid #e8eef4;border-radius:20px;padding:14px;
+      box-shadow:0 8px 24px rgba(15,23,42,.05)
+    }
+    .history-day-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+    .history-date-wrap{display:flex;align-items:center;gap:10px;min-width:0}
+    .history-date-icon{
+      width:38px;height:38px;border-radius:12px;display:grid;place-items:center;
+      background:#fff3e6;color:var(--orange);font-size:17px;flex:0 0 auto
+    }
+    .history-date{font-size:13px;font-weight:900;color:#0f172a}
+    .history-source{font-size:9.5px;color:var(--muted);margin-top:2px}
+    .history-status{
+      border-radius:99px;padding:6px 8px;font-size:8.8px;font-weight:900;white-space:nowrap;
+      background:#eafaf3;color:#0c8058
+    }
+    .history-status.open{background:#fff5e8;color:#bd6200}
+    .history-timeline{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-top:15px;position:relative}
+    .history-timeline:before{
+      content:"";position:absolute;left:10%;right:10%;top:7px;height:2px;background:#e2e8f0;z-index:0
+    }
+    .history-step{text-align:center;position:relative;z-index:1;min-width:0}
+    .history-point{
+      width:14px;height:14px;border-radius:50%;margin:0 auto 7px;border:3px solid #fff;
+      box-shadow:0 0 0 1px #dbe4ec;background:#94a3b8
+    }
+    .history-step.entry .history-point{background:#16c784}
+    .history-step.lunch .history-point{background:#ff8a1f}
+    .history-step.return .history-point{background:#3b82f6}
+    .history-step.exit .history-point{background:#ef6461}
+    .history-step-label{
+      font-size:7.8px;line-height:1.1;color:#7b8a9b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis
+    }
+    .history-step-time{font-size:13px;font-weight:950;color:#142033;margin-top:3px}
+    .history-step.entry .history-step-time{color:#0a9968}
+    .history-step.lunch .history-step-time{color:#db6b00}
+    .history-step.return .history-step-time{color:#2675d5}
+    .history-step.exit .history-step-time{color:#d94d4a}
+    .history-card-foot{
+      display:flex;justify-content:space-between;align-items:center;gap:10px;
+      border-top:1px solid #edf1f5;margin-top:13px;padding-top:10px;
+      color:#64748b;font-size:9.8px
+    }
+    .history-duration{font-weight:900;color:#0f172a}
+    .history-actions{display:flex;justify-content:flex-end;margin-top:14px}
+    .history-clear{
+      border:0;background:transparent;color:#d83c32;font-size:10.5px;font-weight:850;padding:8px 4px
+    }
+    .empty{
+      text-align:center;color:var(--muted);padding:36px 14px;font-size:12px;background:#fff;
+      border:1px dashed #dbe3eb;border-radius:18px
+    }
 
     .stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
     .stat-box{border-radius:18px;padding:17px;background:#fff;border:1px solid #edf1f5}
@@ -576,18 +640,38 @@
   <section id="view-history" class="view">
     <div class="page-header">
       <div class="page-title">Histórico</div>
-      <div class="page-sub">Seus horários de almoço registrados neste aparelho</div>
+      <div class="page-sub">Suas marcações e intervalos registrados</div>
     </div>
 
-    <div class="panel" style="margin-top:16px">
-      <div class="section-head">
-        <h2>Registros</h2>
-        <span class="pill orange" id="historyCount">0 registros</span>
+    <div class="history-shell">
+      <div class="history-overview">
+        <div class="history-kpi">
+          <div class="history-kpi-label">Dias registrados</div>
+          <div class="history-kpi-value" id="historyCount">0</div>
+        </div>
+        <div class="history-kpi">
+          <div class="history-kpi-label">Média do almoço</div>
+          <div class="history-kpi-value green" id="historyAvgLunch">--</div>
+        </div>
+        <div class="history-kpi">
+          <div class="history-kpi-label">Última saída</div>
+          <div class="history-kpi-value orange" id="historyLastExit">--:--</div>
+        </div>
       </div>
+
+      <div class="history-filter" role="tablist" aria-label="Período do histórico">
+        <button class="history-filter-btn" id="historyFilterToday" onclick="setHistoryFilter('today')">Hoje</button>
+        <button class="history-filter-btn" id="historyFilterWeek" onclick="setHistoryFilter('week')">Semana</button>
+        <button class="history-filter-btn active" id="historyFilterMonth" onclick="setHistoryFilter('month')">Mês</button>
+      </div>
+
       <div id="historyList" class="history-list">
-        <div class="empty">Nenhum horário calculado ainda.</div>
+        <div class="empty">Nenhuma marcação encontrada neste período.</div>
       </div>
-      <button class="btn btn-danger" onclick="limparHistorico()">Limpar histórico</button>
+
+      <div class="history-actions">
+        <button class="history-clear" onclick="limparHistorico()">Limpar histórico deste aparelho</button>
+      </div>
     </div>
   </section>
 
@@ -1406,6 +1490,47 @@
     setNotificationsEnabled(!notifyEnabled,true);
   }
 
+  let historyFilter = 'month';
+
+  function parseHistoryDate(value){
+    const m = String(value || '').match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if(!m) return null;
+    const d = new Date(Number(m[3]),Number(m[2])-1,Number(m[1]),12,0,0,0);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+
+  function formatMinutesCompact(total){
+    if(total === null || total === undefined || !Number.isFinite(Number(total))) return '--';
+    const mins = Math.max(0,Math.round(Number(total)));
+    const h = Math.floor(mins/60);
+    const m = mins%60;
+    if(h && m) return h + 'h' + String(m).padStart(2,'0');
+    if(h) return h + 'h';
+    return m + ' min';
+  }
+
+  function lunchMinutesFromRecord(item){
+    const out = minutesFromTime(item.saidaAlmoco || item.saida);
+    const back = minutesFromTime(item.retorno);
+    if(out === null || back === null) return null;
+    let diff = back-out;
+    if(diff < 0) diff += 24*60;
+    return diff;
+  }
+
+  function normalizeHistoryRecord(item){
+    item = item || {};
+    return {
+      data:item.data || '',
+      entrada:item.entrada || null,
+      saidaAlmoco:item.saidaAlmoco || item.saida || null,
+      saida:item.saidaAlmoco || item.saida || null,
+      retorno:item.retorno || null,
+      saidaFinal:item.saidaFinal || item.exit || null,
+      origem:item.origem || 'App'
+    };
+  }
+
   function salvarHistorico(saida,retorno,dataRegistro,origem){
     if(!saida || !retorno) return;
     let historico = JSON.parse(localStorage.getItem('historicoAlmoco') || '[]');
@@ -1413,12 +1538,13 @@
     const registro = {
       data:dataFinal,
       saida:saida,
+      saidaAlmoco:saida,
       retorno:retorno,
       origem:origem || 'App'
     };
 
     const idx = historico.findIndex(function(item){
-      return item.data === dataFinal && item.saida === saida;
+      return item.data === dataFinal;
     });
 
     if(idx >= 0){
@@ -1429,31 +1555,136 @@
       historico.unshift(registro);
     }
 
-    historico = historico.slice(0,50);
+    historico = historico.slice(0,60);
     localStorage.setItem('historicoAlmoco',JSON.stringify(historico));
     mostrarHistorico();
     atualizarEstatisticas();
   }
 
-  function mostrarHistorico(){
-    const historico = JSON.parse(localStorage.getItem('historicoAlmoco') || '[]');
-    const lista = document.getElementById('historyList');
-    document.getElementById('historyCount').textContent = historico.length + (historico.length === 1 ? ' registro' : ' registros');
+  function salvarHistoricoJornada(entrada,saidaAlmoco,retorno,saidaFinal,dataRegistro,origem){
+    if(!entrada && !saidaAlmoco && !retorno && !saidaFinal) return;
+    let historico = JSON.parse(localStorage.getItem('historicoAlmoco') || '[]');
+    const dataFinal = dataRegistro || new Date().toLocaleDateString('pt-BR');
+    const registro = {
+      data:dataFinal,
+      entrada:entrada || null,
+      saida:saidaAlmoco || null,
+      saidaAlmoco:saidaAlmoco || null,
+      retorno:retorno || null,
+      saidaFinal:saidaFinal || null,
+      origem:origem || 'Senior'
+    };
 
-    if(historico.length === 0){
-      lista.innerHTML = '<div class="empty">Nenhum horário calculado ainda.</div>';
+    const idx = historico.findIndex(function(item){ return item.data === dataFinal; });
+    if(idx >= 0){
+      historico[idx] = Object.assign({},historico[idx],registro);
+      const atualizado = historico.splice(idx,1)[0];
+      historico.unshift(atualizado);
+    } else {
+      historico.unshift(registro);
+    }
+
+    historico = historico.slice(0,60);
+    localStorage.setItem('historicoAlmoco',JSON.stringify(historico));
+    mostrarHistorico();
+    atualizarEstatisticas();
+  }
+
+  function setHistoryFilter(filter){
+    historyFilter = filter || 'month';
+    ['today','week','month'].forEach(function(name){
+      const id = name === 'today' ? 'historyFilterToday' : name === 'week' ? 'historyFilterWeek' : 'historyFilterMonth';
+      const el = document.getElementById(id);
+      if(el) el.classList.toggle('active',name === historyFilter);
+    });
+    mostrarHistorico();
+  }
+
+  function recordMatchesHistoryFilter(item){
+    const d = parseHistoryDate(item.data);
+    if(!d) return historyFilter === 'month';
+    const now = new Date();
+    const today = new Date(now.getFullYear(),now.getMonth(),now.getDate(),12);
+    const candidate = new Date(d.getFullYear(),d.getMonth(),d.getDate(),12);
+
+    if(historyFilter === 'today'){
+      return candidate.getTime() === today.getTime();
+    }
+
+    if(historyFilter === 'week'){
+      const start = new Date(today);
+      const day = (today.getDay()+6)%7;
+      start.setDate(today.getDate()-day);
+      const end = new Date(start);
+      end.setDate(start.getDate()+6);
+      return candidate >= start && candidate <= end;
+    }
+
+    return candidate.getMonth() === today.getMonth() && candidate.getFullYear() === today.getFullYear();
+  }
+
+  function mostrarHistorico(){
+    let historico = [];
+    try{ historico = JSON.parse(localStorage.getItem('historicoAlmoco') || '[]'); }catch(_){ historico = []; }
+    historico = Array.isArray(historico) ? historico.map(normalizeHistoryRecord) : [];
+
+    const lista = document.getElementById('historyList');
+    if(!lista) return;
+
+    const filtrado = historico.filter(recordMatchesHistoryFilter);
+    const count = document.getElementById('historyCount');
+    const avg = document.getElementById('historyAvgLunch');
+    const lastExit = document.getElementById('historyLastExit');
+
+    if(count) count.textContent = String(filtrado.length);
+
+    const durations = filtrado.map(lunchMinutesFromRecord).filter(function(v){ return v !== null; });
+    if(avg){
+      avg.textContent = durations.length
+        ? formatMinutesCompact(durations.reduce(function(a,b){ return a+b; },0)/durations.length)
+        : '--';
+    }
+
+    if(lastExit){
+      const finalRecord = filtrado.find(function(r){ return r.saidaFinal; });
+      lastExit.textContent = finalRecord && finalRecord.saidaFinal ? finalRecord.saidaFinal : '--:--';
+    }
+
+    if(filtrado.length === 0){
+      lista.innerHTML = '<div class="empty">Nenhuma marcação encontrada neste período.</div>';
       return;
     }
 
     lista.innerHTML = '';
-    historico.forEach(function(registro){
+    filtrado.forEach(function(registro){
+      const duration = lunchMinutesFromRecord(registro);
+      const complete = !!registro.saidaFinal;
       const item = document.createElement('div');
-      item.className = 'history-item';
+      item.className = 'history-day-card';
+
+      function safeTime(v){ return v || '--:--'; }
+
       item.innerHTML =
-        '<div class="history-dot">🍴</div>' +
-        '<div><div class="history-date">' + registro.data + '</div>' +
-        '<div class="history-main">Saída ' + registro.saida + ' • Retorno ' + registro.retorno + '</div></div>' +
-        '<div class="history-return">' + registro.retorno + '</div>';
+        '<div class="history-day-head">' +
+          '<div class="history-date-wrap">' +
+            '<div class="history-date-icon">▦</div>' +
+            '<div><div class="history-date">' + registro.data + '</div>' +
+            '<div class="history-source">' + (registro.origem === 'Senior' ? 'Sincronizado com a Senior' : 'Registrado no app') + '</div></div>' +
+          '</div>' +
+          '<div class="history-status' + (complete ? '' : ' open') + '">' +
+            (complete ? 'Jornada concluída' : 'Em andamento') +
+          '</div>' +
+        '</div>' +
+        '<div class="history-timeline">' +
+          '<div class="history-step entry"><div class="history-point"></div><div class="history-step-label">Entrada</div><div class="history-step-time">' + safeTime(registro.entrada) + '</div></div>' +
+          '<div class="history-step lunch"><div class="history-point"></div><div class="history-step-label">Saída almoço</div><div class="history-step-time">' + safeTime(registro.saidaAlmoco) + '</div></div>' +
+          '<div class="history-step return"><div class="history-point"></div><div class="history-step-label">Retorno</div><div class="history-step-time">' + safeTime(registro.retorno) + '</div></div>' +
+          '<div class="history-step exit"><div class="history-point"></div><div class="history-step-label">Saída</div><div class="history-step-time">' + safeTime(registro.saidaFinal) + '</div></div>' +
+        '</div>' +
+        '<div class="history-card-foot">' +
+          '<span>Intervalo de almoço</span>' +
+          '<span class="history-duration">' + (duration === null ? '--' : formatMinutesCompact(duration)) + '</span>' +
+        '</div>';
       lista.appendChild(item);
     });
   }
@@ -1965,6 +2196,9 @@
     document.getElementById('sumExit').textContent = exit || '--:--';
 
     const eventDay = (events && events[0] && events[0].day) || new Date().toLocaleDateString('pt-BR');
+
+    // Mantém no histórico o extrato completo do dia, não apenas o intervalo.
+    salvarHistoricoJornada(entry,lunchOut,lunchReturn,exit,eventDay,'Senior');
 
     if(lunchOut && lunchReturn){
       // A Senior já tem a volta real: recupera/atualiza o histórico mesmo após reinstalar o app.
