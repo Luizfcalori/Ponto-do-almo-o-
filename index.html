@@ -511,10 +511,27 @@
       background:rgba(255,255,255,.97);backdrop-filter:blur(16px);border-top:1px solid #e6ebf0;z-index:20
     }
     .nav-item{
-      flex:1;flex-direction:column;justify-content:center;gap:4px;border:0;background:transparent;color:#64748b;font-size:10px;font-weight:750
+      flex:1;flex-direction:column;justify-content:center;gap:4px;border:0;background:transparent;color:#64748b;font-size:10px;font-weight:750;position:relative
     }
-    .nav-icon{font-size:21px;line-height:1}
+    .nav-icon{font-size:21px;line-height:1;position:relative}
     .nav-item.active{color:var(--orange)}
+    .profile-update-dot{
+      display:none;position:absolute;top:-7px;right:-11px;width:16px;height:16px;border-radius:50%;
+      place-items:center;background:#ff7a00;color:#fff;font-size:10px;font-weight:950;
+      box-shadow:0 0 0 3px #fff,0 3px 8px rgba(255,122,0,.35)
+    }
+    .profile-update-dot.show{display:grid}
+    .update-row-attention{
+      border-radius:14px;padding-left:10px;padding-right:10px;background:#fff8ef;
+      box-shadow:inset 0 0 0 1px #ffd6ad
+    }
+    .update-right{display:flex;align-items:center;gap:7px;flex:0 0 auto}
+    .update-alert-icon{
+      display:none;width:25px;height:25px;border-radius:50%;place-items:center;
+      background:#ff7a00;color:#fff;font-size:15px;font-weight:950;
+      box-shadow:0 5px 12px rgba(255,122,0,.22)
+    }
+    .update-alert-icon.show{display:grid}
 
     .toast{
       position:fixed;left:50%;transform:translateX(-50%);bottom:92px;width:calc(100% - 32px);max-width:488px;
@@ -922,12 +939,15 @@
         <div id="profileNotifyToggle" class="toggle on" role="switch" aria-label="Notificações do almoço" aria-checked="true"></div>
       </div>
 
-      <div class="setting-row">
+      <div class="setting-row" id="appUpdateRow" onclick="handleUpdateRowClick()" style="cursor:pointer">
         <div>
           <div class="setting-title">Atualizar aplicativo</div>
           <div class="setting-sub" id="appUpdateSub">Verificando a versão instalada...</div>
         </div>
-        <span class="pill" id="appVersionPill">--</span>
+        <div class="update-right">
+          <span class="update-alert-icon" id="appUpdateAlert">!</span>
+          <span class="pill" id="appVersionPill">--</span>
+        </div>
       </div>
 
       <button class="btn btn-outline" onclick="openSeniorModal()">Configurar Senior</button>
@@ -982,7 +1002,7 @@
       <span class="nav-icon">▥</span><span>Estatísticas</span>
     </button>
     <button id="nav-profile" class="nav-item" onclick="goView('profile')">
-      <span class="nav-icon">◉</span><span>Perfil</span>
+      <span class="nav-icon">◉<span class="profile-update-dot" id="profileUpdateDot">!</span></span><span>Perfil</span>
     </button>
   </nav>
 
@@ -997,6 +1017,8 @@
   let toastTimer = null;
   let currentNativeVersion = null;
   let latestAppUpdate = null;
+  let appUpdatePending = false;
+  let autoUpdateStartedCode = null;
 
   function pad(n){ return String(n).padStart(2,'0'); }
 
@@ -1357,6 +1379,25 @@
     window.scrollTo({top:0,behavior:'smooth'});
   }
 
+  function setAppUpdateAttention(enabled){
+    appUpdatePending = !!enabled;
+    const dot = document.getElementById('profileUpdateDot');
+    const alert = document.getElementById('appUpdateAlert');
+    const row = document.getElementById('appUpdateRow');
+
+    if(dot) dot.classList.toggle('show',appUpdatePending);
+    if(alert) alert.classList.toggle('show',appUpdatePending);
+    if(row) row.classList.toggle('update-row-attention',appUpdatePending);
+  }
+
+  function handleUpdateRowClick(){
+    if(appUpdatePending && latestAppUpdate && latestAppUpdate.apkUrl){
+      startAppUpdate();
+    } else {
+      checkAppUpdate(true);
+    }
+  }
+
   function refreshAppVersionInfo(){
     const pill = document.getElementById('appVersionPill');
     const sub = document.getElementById('appUpdateSub');
@@ -1391,6 +1432,7 @@
     const current = currentNativeVersion || refreshAppVersionInfo();
 
     if(!current || !current.versionCode){
+      setAppUpdateAttention(false);
       if(btn){
         btn.textContent = 'Atualizador disponível no Android';
         btn.disabled = true;
@@ -1415,14 +1457,28 @@
       const currentCode = Number(current.versionCode || 0);
 
       if(latestCode > currentCode && data.apkUrl){
-        if(sub) sub.textContent = 'Nova versão ' + data.versionName + ' disponível.';
+        setAppUpdateAttention(true);
+        if(sub) sub.textContent = '⚠ Nova versão ' + data.versionName + ' disponível • preparando atualização.';
         if(btn){
           btn.disabled = false;
           btn.textContent = 'Atualizar para ' + data.versionName;
           btn.onclick = startAppUpdate;
         }
-        if(userInitiated) showToast('Nova versão ' + data.versionName + ' disponível.');
+
+        if(window.AndroidSenior && typeof window.AndroidSenior.installUpdate === 'function' &&
+           autoUpdateStartedCode !== latestCode){
+          autoUpdateStartedCode = latestCode;
+          showToast('Nova versão ' + data.versionName + ' encontrada. Preparando download...');
+          setTimeout(function(){
+            if(latestAppUpdate && Number(latestAppUpdate.versionCode) === latestCode){
+              startAppUpdate();
+            }
+          },700);
+        } else if(userInitiated){
+          showToast('Nova versão ' + data.versionName + ' disponível.');
+        }
       } else {
+        setAppUpdateAttention(false);
         if(sub) sub.textContent = 'Aplicativo atualizado • versão ' + current.versionName;
         if(btn){
           btn.disabled = false;
@@ -1432,6 +1488,7 @@
         if(userInitiated) showToast('Você já está na versão mais recente.');
       }
     }catch(_){
+      setAppUpdateAttention(false);
       if(sub) sub.textContent = 'Não foi possível consultar atualizações agora.';
       if(btn){
         btn.disabled = false;
@@ -1466,14 +1523,16 @@
       if(data.message && sub) sub.textContent = data.message;
 
       if(data.state === 'downloading' && btn){
+        setAppUpdateAttention(true);
         btn.disabled = true;
         btn.textContent = 'Baixando atualização...';
       } else if(data.state === 'permission_required' && btn){
         btn.disabled = false;
         btn.textContent = 'Continuar atualização';
       } else if(data.state === 'installer' && btn){
+        setAppUpdateAttention(true);
         btn.disabled = false;
-        btn.textContent = 'Confirmar no Android';
+        btn.textContent = 'Instalar atualização';
       } else if(data.state === 'error' && btn){
         btn.disabled = false;
         btn.textContent = 'Tentar novamente';
@@ -2972,6 +3031,12 @@
   refreshWeather();
   restaurarEstado();
   initSenior();
+
+  // Verifica atualizações automaticamente ao abrir o app.
+  setTimeout(function(){
+    refreshAppVersionInfo();
+    checkAppUpdate(false);
+  },1200);
 </script>
 <!-- Senior integration production marker -->
 </body>
