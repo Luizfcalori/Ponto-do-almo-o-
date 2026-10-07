@@ -405,14 +405,88 @@
       border:1px dashed #dbe3eb;border-radius:18px
     }
 
-    .stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    .stat-box{border-radius:18px;padding:17px;background:#fff;border:1px solid #edf1f5}
-    .stat-box .k{font-size:11px;color:var(--muted)}
-    .stat-box .v{font-size:27px;font-weight:950;margin-top:5px}
+    .stats-shell{padding:16px 16px 20px}
+    .stats-filter{
+      display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:#eaf0f5;
+      padding:4px;border-radius:14px;margin-bottom:13px
+    }
+    .stats-filter-btn{
+      border:0;background:transparent;border-radius:10px;padding:8px 4px;color:#64748b;
+      font-size:10.5px;font-weight:850;transition:.18s
+    }
+    .stats-filter-btn.active{
+      background:#fff;color:#0f172a;box-shadow:0 3px 10px rgba(15,23,42,.08)
+    }
+    .stats-section{
+      background:#fff;border:1px solid #e8eef4;border-radius:22px;padding:14px;
+      box-shadow:0 8px 26px rgba(15,23,42,.05);margin-bottom:12px
+    }
+    .stats-section-title{
+      font-size:12.5px;font-weight:950;color:#0f172a;margin-bottom:10px;letter-spacing:-.1px
+    }
+    .stats-section-sub{
+      font-size:9.3px;color:#7b8a9b;margin-top:-6px;margin-bottom:10px;line-height:1.35
+    }
+    .stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+    .stat-box{
+      border-radius:15px;padding:12px;background:#f8fafc;border:1px solid #edf1f5;min-width:0
+    }
+    .stat-box .k{font-size:9px;color:var(--muted);font-weight:750;line-height:1.2}
+    .stat-box .v{font-size:22px;font-weight:950;margin-top:4px;letter-spacing:-.45px}
     .stat-box.orange .v{color:var(--orange)}
     .stat-box.green .v{color:var(--green-dark)}
     .stat-box.blue .v{color:#1d72d2}
     .stat-box.purple .v{color:var(--purple)}
+    .stat-box.red .v{color:#d64541}
+    .stat-box.slate .v{color:#334155}
+
+    .stats-mini-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+    .stats-mini{
+      padding:10px;border-radius:14px;background:#f8fafc;border:1px solid #edf1f5
+    }
+    .stats-mini-label{font-size:8.7px;color:#7b8a9b;font-weight:750}
+    .stats-mini-value{font-size:16px;font-weight:950;margin-top:3px;color:#0f172a}
+    .stats-mini-value.orange{color:#dc6d00}
+    .stats-mini-value.blue{color:#2875cf}
+    .stats-mini-value.green{color:#0a8f61}
+    .stats-mini-value.red{color:#d64541}
+
+    .balance-chart{display:grid;gap:8px;margin-top:4px}
+    .balance-row{display:grid;grid-template-columns:44px 1fr 54px;gap:8px;align-items:center}
+    .balance-date{font-size:8.8px;color:#64748b;font-weight:800}
+    .balance-track{
+      position:relative;height:12px;background:#eef2f6;border-radius:99px;overflow:hidden
+    }
+    .balance-track:after{
+      content:"";position:absolute;top:0;bottom:0;left:50%;width:1px;background:#cbd5e1;z-index:2
+    }
+    .balance-bar{
+      position:absolute;top:2px;height:8px;border-radius:99px;min-width:2px
+    }
+    .balance-bar.extra{left:50%;background:#2f80ed}
+    .balance-bar.delay{right:50%;background:#e45d58}
+    .balance-bar.ok{left:calc(50% - 3px);width:6px!important;background:#16a36f}
+    .balance-value{text-align:right;font-size:9px;font-weight:900;color:#334155}
+    .balance-legend{
+      display:flex;justify-content:center;gap:14px;margin-top:10px;font-size:8.5px;color:#7b8a9b
+    }
+    .balance-legend span{display:flex;align-items:center;gap:4px}
+    .legend-dot{width:7px;height:7px;border-radius:50%}
+    .legend-dot.blue{background:#2f80ed}
+    .legend-dot.green{background:#16a36f}
+    .legend-dot.red{background:#e45d58}
+
+    .insights-list{display:grid;gap:8px}
+    .insight-item{
+      display:flex;gap:9px;align-items:flex-start;padding:10px;border-radius:14px;
+      background:#f8fafc;border:1px solid #edf1f5
+    }
+    .insight-icon{
+      width:27px;height:27px;border-radius:9px;display:grid;place-items:center;
+      background:#eafaf3;color:#0b8f62;flex:0 0 auto;font-size:13px
+    }
+    .insight-text{font-size:9.8px;line-height:1.4;color:#475569}
+    .stats-empty{font-size:10.5px;color:#7b8a9b;text-align:center;padding:18px 6px}
 
     .profile-card{
       display:flex;gap:13px;align-items:center;padding:16px;border-radius:20px;background:#0c2334;color:#fff;margin:16px
@@ -694,26 +768,108 @@
   <section id="view-stats" class="view">
     <div class="page-header">
       <div class="page-title">Estatísticas</div>
-      <div class="page-sub">Resumo dos horários salvos no seu aparelho</div>
+      <div class="page-sub">Painel da sua jornada e dos intervalos</div>
     </div>
 
-    <div class="panel" style="margin-top:16px">
-      <div class="stats-grid">
-        <div class="stat-box orange">
-          <div class="k">Almoços registrados</div>
-          <div class="v" id="statCount">0</div>
+    <div class="stats-shell">
+      <div class="stats-filter" role="tablist" aria-label="Período das estatísticas">
+        <button class="stats-filter-btn" id="statsFilterToday" onclick="setStatsFilter('today')">Hoje</button>
+        <button class="stats-filter-btn" id="statsFilterWeek" onclick="setStatsFilter('week')">Semana</button>
+        <button class="stats-filter-btn active" id="statsFilterMonth" onclick="setStatsFilter('month')">Mês</button>
+      </div>
+
+      <div class="stats-section">
+        <div class="stats-section-title">Resumo do período</div>
+        <div class="stats-grid">
+          <div class="stat-box orange">
+            <div class="k">Dias registrados</div>
+            <div class="v" id="statCount">0</div>
+          </div>
+          <div class="stat-box green">
+            <div class="k">Jornada média</div>
+            <div class="v" id="statAvgWork">--</div>
+          </div>
+          <div class="stat-box blue">
+            <div class="k">Saldo acumulado</div>
+            <div class="v" id="statBalance">--</div>
+          </div>
+          <div class="stat-box purple">
+            <div class="k">Pontualidade</div>
+            <div class="v" id="statPunctuality">--</div>
+          </div>
         </div>
-        <div class="stat-box green">
-          <div class="k">Intervalo padrão</div>
-          <div class="v" id="statInterval">--</div>
+      </div>
+
+      <div class="stats-section">
+        <div class="stats-section-title">Intervalo de almoço</div>
+        <div class="stats-section-sub">Médias e variações dos intervalos registrados.</div>
+        <div class="stats-mini-grid">
+          <div class="stats-mini">
+            <div class="stats-mini-label">Intervalo médio</div>
+            <div class="stats-mini-value orange" id="statAvgLunch">--</div>
+          </div>
+          <div class="stats-mini">
+            <div class="stats-mini-label">Menor intervalo</div>
+            <div class="stats-mini-value green" id="statMinLunch">--</div>
+          </div>
+          <div class="stats-mini">
+            <div class="stats-mini-label">Maior intervalo</div>
+            <div class="stats-mini-value red" id="statMaxLunch">--</div>
+          </div>
+          <div class="stats-mini">
+            <div class="stats-mini-label">Saída média</div>
+            <div class="stats-mini-value blue" id="statAvgOut">--:--</div>
+          </div>
+          <div class="stats-mini">
+            <div class="stats-mini-label">Retorno médio</div>
+            <div class="stats-mini-value blue" id="statAvgReturn">--:--</div>
+          </div>
+          <div class="stats-mini">
+            <div class="stats-mini-label">Intervalo previsto</div>
+            <div class="stats-mini-value" id="statInterval">--</div>
+          </div>
         </div>
-        <div class="stat-box blue">
-          <div class="k">Saída média</div>
-          <div class="v" id="statAvgOut">--:--</div>
+      </div>
+
+      <div class="stats-section">
+        <div class="stats-section-title">Jornada</div>
+        <div class="stats-mini-grid">
+          <div class="stats-mini">
+            <div class="stats-mini-label">Jornada cumprida</div>
+            <div class="stats-mini-value green" id="statFulfilled">0</div>
+          </div>
+          <div class="stats-mini">
+            <div class="stats-mini-label">Dias com atraso</div>
+            <div class="stats-mini-value red" id="statDelays">0</div>
+          </div>
+          <div class="stats-mini">
+            <div class="stats-mini-label">Dias com hora extra</div>
+            <div class="stats-mini-value blue" id="statOvertime">0</div>
+          </div>
+          <div class="stats-mini">
+            <div class="stats-mini-label">Saídas no horário</div>
+            <div class="stats-mini-value green" id="statOnTimeExit">0</div>
+          </div>
         </div>
-        <div class="stat-box purple">
-          <div class="k">Retorno médio</div>
-          <div class="v" id="statAvgReturn">--:--</div>
+      </div>
+
+      <div class="stats-section">
+        <div class="stats-section-title">Saldo por dia</div>
+        <div class="stats-section-sub">Minutos positivos representam hora extra; negativos representam atraso.</div>
+        <div id="statsBalanceChart" class="balance-chart">
+          <div class="stats-empty">Ainda não há jornadas completas neste período.</div>
+        </div>
+        <div class="balance-legend">
+          <span><i class="legend-dot red"></i>Atraso</span>
+          <span><i class="legend-dot green"></i>No horário</span>
+          <span><i class="legend-dot blue"></i>Hora extra</span>
+        </div>
+      </div>
+
+      <div class="stats-section">
+        <div class="stats-section-title">Insights</div>
+        <div id="statsInsights" class="insights-list">
+          <div class="stats-empty">Os insights aparecerão conforme o histórico for crescendo.</div>
         </div>
       </div>
     </div>
@@ -1833,11 +1989,221 @@
     return pad(Math.floor(media/60)) + ':' + pad(media%60);
   }
 
+  let statsFilter = 'month';
+
+  function statsRecordMatchesFilter(item,filter){
+    const d = parseHistoryDate(item.data);
+    if(!d) return filter === 'month';
+
+    const now = new Date();
+    const today = new Date(now.getFullYear(),now.getMonth(),now.getDate(),12);
+    const candidate = new Date(d.getFullYear(),d.getMonth(),d.getDate(),12);
+
+    if(filter === 'today'){
+      return candidate.getTime() === today.getTime();
+    }
+
+    if(filter === 'week'){
+      const start = new Date(today);
+      const day = (today.getDay()+6)%7;
+      start.setDate(today.getDate()-day);
+      const end = new Date(start);
+      end.setDate(start.getDate()+6);
+      return candidate >= start && candidate <= end;
+    }
+
+    return candidate.getMonth() === today.getMonth() &&
+      candidate.getFullYear() === today.getFullYear();
+  }
+
+  function setStatsFilter(filter){
+    statsFilter = filter || 'month';
+    ['today','week','month'].forEach(function(name){
+      const id = name === 'today' ? 'statsFilterToday' : name === 'week' ? 'statsFilterWeek' : 'statsFilterMonth';
+      const el = document.getElementById(id);
+      if(el) el.classList.toggle('active',name === statsFilter);
+    });
+    atualizarEstatisticas();
+  }
+
+  function averageNumber(values){
+    if(!values.length) return null;
+    return values.reduce(function(a,b){ return a+b; },0)/values.length;
+  }
+
+  function formatSignedMinutes(total){
+    if(total === null || total === undefined || !Number.isFinite(Number(total))) return '--';
+    const value = Math.round(Number(total));
+    if(value === 0) return '0 min';
+    return (value > 0 ? '+' : '-') + formatMinutesCompact(Math.abs(value));
+  }
+
+  function isPunctualRecord(item){
+    if(!item || !item.entrada || !item.saidaFinal) return null;
+    const startActual = minutesFromTime(item.entrada);
+    const endActual = minutesFromTime(item.saidaFinal);
+    const startExpected = minutesFromTime(item.scheduleStart || getExpectedSchedule().start);
+    const endExpected = minutesFromTime(item.scheduleEnd || getExpectedSchedule().end);
+    if(startActual === null || endActual === null || startExpected === null || endExpected === null) return null;
+    return Math.abs(startActual-startExpected) <= WORK_TOLERANCE_MINUTES &&
+      Math.abs(endActual-endExpected) <= WORK_TOLERANCE_MINUTES;
+  }
+
+  function isOnTimeExit(item){
+    if(!item || !item.saidaFinal) return null;
+    const actual = minutesFromTime(item.saidaFinal);
+    const expected = minutesFromTime(item.scheduleEnd || getExpectedSchedule().end);
+    if(actual === null || expected === null) return null;
+    return Math.abs(actual-expected) <= WORK_TOLERANCE_MINUTES;
+  }
+
+  function shortStatsDate(value){
+    const d = parseHistoryDate(value);
+    if(!d) return value || '--';
+    return String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0');
+  }
+
+  function renderBalanceChart(records){
+    const chart = document.getElementById('statsBalanceChart');
+    if(!chart) return;
+
+    const rows = records.map(function(item){
+      return {item:item,balance:workBalanceFromRecord(item)};
+    }).filter(function(row){ return row.balance !== null; });
+
+    if(!rows.length){
+      chart.innerHTML = '<div class="stats-empty">Ainda não há jornadas completas neste período.</div>';
+      return;
+    }
+
+    const displayRows = rows.slice(0,statsFilter === 'month' ? 10 : rows.length);
+    const maxAbs = Math.max(5,Math.max.apply(null,displayRows.map(function(row){ return Math.abs(row.balance); })));
+
+    chart.innerHTML = '';
+    displayRows.forEach(function(row){
+      const wrap = document.createElement('div');
+      wrap.className = 'balance-row';
+      const pct = Math.min(50,(Math.abs(row.balance)/maxAbs)*48);
+      const type = row.balance > 0 ? 'extra' : row.balance < 0 ? 'delay' : 'ok';
+      const barStyle = type === 'ok'
+        ? 'width:6px'
+        : 'width:' + pct + '%';
+
+      wrap.innerHTML =
+        '<div class="balance-date">' + shortStatsDate(row.item.data) + '</div>' +
+        '<div class="balance-track"><div class="balance-bar ' + type + '" style="' + barStyle + '"></div></div>' +
+        '<div class="balance-value">' + formatSignedMinutes(row.balance) + '</div>';
+      chart.appendChild(wrap);
+    });
+  }
+
+  function renderStatsInsights(records,metrics){
+    const box = document.getElementById('statsInsights');
+    if(!box) return;
+
+    if(!records.length){
+      box.innerHTML = '<div class="stats-empty">Os insights aparecerão conforme o histórico for crescendo.</div>';
+      return;
+    }
+
+    const insights = [];
+
+    if(metrics.completeCount){
+      if(metrics.delays === 0){
+        insights.push('Nenhum atraso de jornada foi identificado no período selecionado.');
+      } else {
+        insights.push(metrics.delays + (metrics.delays === 1 ? ' dia terminou com saldo negativo.' : ' dias terminaram com saldo negativo.'));
+      }
+
+      if(metrics.overtime > 0){
+        insights.push('Você acumulou ' + formatSignedMinutes(metrics.positiveBalance) + ' de hora extra no período.');
+      }
+
+      if(metrics.punctuality !== null){
+        insights.push('Sua pontualidade de entrada e saída ficou em ' + metrics.punctuality + '%, considerando a tolerância de 5 minutos.');
+      }
+    }
+
+    if(metrics.avgLunch !== null){
+      insights.push('Seu intervalo médio de almoço foi de ' + formatMinutesCompact(metrics.avgLunch) + '.');
+    }
+
+    if(metrics.balance !== null){
+      if(metrics.balance === 0) insights.push('O saldo acumulado do período está zerado.');
+      else if(metrics.balance > 0) insights.push('Seu saldo líquido está positivo em ' + formatSignedMinutes(metrics.balance) + '.');
+      else insights.push('Seu saldo líquido está negativo em ' + formatSignedMinutes(metrics.balance) + '.');
+    }
+
+    box.innerHTML = '';
+    insights.slice(0,4).forEach(function(text){
+      const item = document.createElement('div');
+      item.className = 'insight-item';
+      item.innerHTML = '<div class="insight-icon">✓</div><div class="insight-text">' + text + '</div>';
+      box.appendChild(item);
+    });
+  }
+
   function atualizarEstatisticas(){
-    const historico = JSON.parse(localStorage.getItem('historicoAlmoco') || '[]');
-    document.getElementById('statCount').textContent = historico.length;
-    document.getElementById('statAvgOut').textContent = mediaHorarios(historico,'saida');
-    document.getElementById('statAvgReturn').textContent = mediaHorarios(historico,'retorno');
+    let historico = [];
+    try{ historico = JSON.parse(localStorage.getItem('historicoAlmoco') || '[]'); }catch(_){ historico = []; }
+    historico = Array.isArray(historico) ? historico.map(normalizeHistoryRecord) : [];
+
+    const filtrado = historico.filter(function(item){ return statsRecordMatchesFilter(item,statsFilter); });
+
+    const countEl = document.getElementById('statCount');
+    if(countEl) countEl.textContent = String(filtrado.length);
+
+    const lunchDurations = filtrado.map(lunchMinutesFromRecord).filter(function(v){ return v !== null; });
+    const workDurations = filtrado.map(workMinutesFromRecord).filter(function(v){ return v !== null; });
+    const balances = filtrado.map(workBalanceFromRecord).filter(function(v){ return v !== null; });
+
+    const avgLunch = averageNumber(lunchDurations);
+    const avgWork = averageNumber(workDurations);
+    const totalBalance = balances.length ? balances.reduce(function(a,b){ return a+b; },0) : null;
+
+    const punctualFlags = filtrado.map(isPunctualRecord).filter(function(v){ return v !== null; });
+    const punctuality = punctualFlags.length
+      ? Math.round(100*punctualFlags.filter(Boolean).length/punctualFlags.length)
+      : null;
+
+    const exits = filtrado.map(isOnTimeExit).filter(function(v){ return v !== null; });
+    const onTimeExit = exits.filter(Boolean).length;
+
+    const delays = balances.filter(function(v){ return v < 0; }).length;
+    const overtime = balances.filter(function(v){ return v > 0; }).length;
+    const fulfilled = balances.filter(function(v){ return v >= 0; }).length;
+    const positiveBalance = balances.filter(function(v){ return v > 0; }).reduce(function(a,b){ return a+b; },0);
+
+    const setText = function(id,value){
+      const el = document.getElementById(id);
+      if(el) el.textContent = value;
+    };
+
+    setText('statAvgWork',avgWork === null ? '--' : formatMinutesCompact(avgWork));
+    setText('statBalance',totalBalance === null ? '--' : formatSignedMinutes(totalBalance));
+    setText('statPunctuality',punctuality === null ? '--' : punctuality + '%');
+    setText('statAvgLunch',avgLunch === null ? '--' : formatMinutesCompact(avgLunch));
+    setText('statMinLunch',lunchDurations.length ? formatMinutesCompact(Math.min.apply(null,lunchDurations)) : '--');
+    setText('statMaxLunch',lunchDurations.length ? formatMinutesCompact(Math.max.apply(null,lunchDurations)) : '--');
+    setText('statAvgOut',mediaHorarios(filtrado,'saidaAlmoco'));
+    setText('statAvgReturn',mediaHorarios(filtrado,'retorno'));
+    setText('statInterval',formatIntervalDuration(getLunchIntervalMinutes()));
+    setText('statFulfilled',String(fulfilled));
+    setText('statDelays',String(delays));
+    setText('statOvertime',String(overtime));
+    setText('statOnTimeExit',String(onTimeExit));
+
+    renderBalanceChart(filtrado);
+
+    renderStatsInsights(filtrado,{
+      completeCount:balances.length,
+      delays:delays,
+      overtime:overtime,
+      punctuality:punctuality,
+      avgLunch:avgLunch,
+      balance:totalBalance,
+      positiveBalance:positiveBalance
+    });
   }
 
   function restaurarEstado(){
