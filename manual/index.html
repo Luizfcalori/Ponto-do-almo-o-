@@ -575,6 +575,27 @@
     .manual-punch-btn{width:100%;border:0;border-radius:13px;margin-top:10px;padding:11px 12px;background:linear-gradient(135deg,#ff7000,#ff8e24);color:#fff;font-size:12px;font-weight:900;box-shadow:0 8px 18px rgba(255,122,0,.20)}
     .manual-punch-btn.done{background:#eafaf3;color:#087653;box-shadow:none}
     .manual-edit-btn{width:100%;border:0;background:transparent;color:#64748b;padding:8px 4px 2px;font-size:9.5px;font-weight:800}
+    .manual-schedule-summary{
+      display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px
+    }
+    .manual-schedule-summary span{
+      background:#f7fafc;border:1px solid #e8eef4;border-radius:11px;padding:7px 4px;
+      text-align:center;font-size:8px;color:#7b8a9b
+    }
+    .manual-schedule-summary b{display:block;color:#0f172a;font-size:11px;margin-top:2px}
+    .manual-schedule-btn{
+      width:100%;margin-top:8px;border:1px solid #dbe4ec;background:#fff;color:#0f172a;
+      border-radius:12px;padding:9px 10px;font-size:9.8px;font-weight:850
+    }
+    .schedule-modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .schedule-field{margin-top:13px}
+    .schedule-field.full{grid-column:1/-1}
+    .schedule-field label{display:block;font-size:10px;font-weight:850;color:#334155;margin-bottom:6px}
+    .schedule-field input{
+      width:100%;border:1px solid #d7e0e9;border-radius:13px;background:#fff;
+      padding:12px 10px;font-size:16px;color:#0f172a;outline:none
+    }
+    .schedule-help{margin-top:10px;font-size:9px;line-height:1.45;color:#7b8a9b}
   </style>
 </head>
 <body>
@@ -667,8 +688,14 @@
           </div>
           <div class="manual-clock-badge" id="manualClockBadge">0/4</div>
         </div>
+        <div class="manual-schedule-summary" id="manualScheduleSummary">
+          <span>Entrada <b id="manualScheduleStartView">--:--</b></span>
+          <span>Saída <b id="manualScheduleEndView">--:--</b></span>
+          <span>Almoço <b id="manualScheduleBreakView">Definir</b></span>
+        </div>
+        <button class="manual-schedule-btn" onclick="openManualScheduleModal()">Definir horários da jornada</button>
         <button class="manual-punch-btn" id="manualPunchBtn" onclick="manualPunch()">Registrar entrada</button>
-        <button class="manual-edit-btn" onclick="editManualClockings()">Corrigir horários</button>
+        <button class="manual-edit-btn" onclick="editManualClockings()">Corrigir marcações</button>
       </div>
     </div>
   </section>
@@ -945,6 +972,44 @@
   </section>
 
 
+  <div id="manualScheduleModal" class="modal-backdrop" onclick="closeManualScheduleModal(event)">
+    <div class="modal-card" onclick="event.stopPropagation()">
+      <div class="modal-head">
+        <div>
+          <div class="modal-title">Sua jornada</div>
+          <div class="modal-sub">Escolha os horários usando o seletor do celular. Nenhum horário vem fixo.</div>
+        </div>
+        <button class="modal-close" onclick="closeManualScheduleModal()">✕</button>
+      </div>
+
+      <div class="schedule-field full">
+        <label for="manualNameInput">Seu primeiro nome</label>
+        <input id="manualNameInput" type="text" placeholder="Ex.: Luiz">
+      </div>
+
+      <div class="schedule-modal-grid">
+        <div class="schedule-field">
+          <label for="manualStartInput">Entrada prevista</label>
+          <input id="manualStartInput" type="time">
+        </div>
+        <div class="schedule-field">
+          <label for="manualEndInput">Saída prevista</label>
+          <input id="manualEndInput" type="time">
+        </div>
+        <div class="schedule-field full">
+          <label for="manualBreakInput">Tempo de almoço</label>
+          <input id="manualBreakInput" type="time" step="60">
+        </div>
+      </div>
+
+      <div class="schedule-help">
+        Você pode alterar estes horários quando quiser. O app usa esse período apenas para calcular jornada, atraso e hora extra.
+      </div>
+
+      <button class="btn btn-orange" onclick="saveManualSchedule()">Salvar jornada</button>
+    </div>
+  </div>
+
   <div id="seniorModal" class="modal-backdrop" onclick="closeSeniorModal(event)">
     <div class="modal-card" onclick="event.stopPropagation()">
       <div class="modal-head">
@@ -999,7 +1064,7 @@
 </div>
 
 <script>
-  const INTERVALO_PADRAO_MINUTOS = 72;
+  const INTERVALO_PADRAO_MINUTOS = 0;
   let ultimoRetornoHora = null;
   let ultimoRetornoMinuto = null;
   let notifyEnabled = true;
@@ -1010,7 +1075,7 @@
   function pad(n){ return String(n).padStart(2,'0'); }
 
   function getLunchIntervalMinutes(){
-    const raw = localStorage.getItem('seniorScheduleBreak');
+    const raw = localStorage.getItem('manualScheduleBreak');
     if(raw){
       const match = String(raw).trim().match(/^(\d{1,2}):([0-5]\d)$/);
       if(match){
@@ -1034,8 +1099,8 @@
 
   function refreshIntervalUI(){
     const minutes = getLunchIntervalMinutes();
-    const formatted = formatIntervalDuration(minutes);
-    const source = localStorage.getItem('seniorScheduleBreak') ? 'Configuração manual' : 'Padrão';
+    const hasLunch = minutes > 0;
+    const formatted = hasLunch ? formatIntervalDuration(minutes) : 'Definir';
 
     const metric = document.getElementById('lunchDurationValue');
     const stat = document.getElementById('statInterval');
@@ -1045,10 +1110,9 @@
     if(metric) metric.textContent = formatted;
     if(stat) stat.textContent = formatted;
     if(pill) pill.textContent = formatted;
-    if(pageSub) pageSub.textContent =
-      source === 'Configuração manual'
-        ? 'Intervalo da sua escala • ' + formatted
-        : 'Intervalo padrão • ' + formatted;
+    if(pageSub) pageSub.textContent = hasLunch
+      ? 'Intervalo configurado • ' + formatted
+      : 'Defina quanto tempo de almoço você fará';
   }
 
   function setClockRingProgress(percent){
@@ -1175,7 +1239,7 @@
     document.getElementById('currentTime').textContent = exitTime;
     document.getElementById('clockSubtitle').textContent = 'Saída registrada';
 
-    let deltaText = 'Saída registrada na Senior';
+    let deltaText = 'Saída registrada manualmente';
     const exitMin = minutesFromTime(exitTime);
     const expectedMin = minutesFromTime(expectedTime);
     if(exitMin !== null && expectedMin !== null){
@@ -1545,7 +1609,7 @@
     renderLunchClock(valor,retorno);
 
     salvarHistorico(valor,retorno);
-    localStorage.setItem('almocoAtivo',JSON.stringify({saida:valor,retorno:retorno,data:new Date().toISOString()}));
+    localStorage.setItem('almocoAtivoManual',JSON.stringify({saida:valor,retorno:retorno,data:new Date().toISOString()}));
     atualizarProgresso();
     showToast('Retorno calculado para ' + retorno + '.');
 
@@ -1553,7 +1617,7 @@
   }
 
   function atualizarProgresso(){
-    const ativo = JSON.parse(localStorage.getItem('almocoAtivo') || 'null');
+    const ativo = JSON.parse(localStorage.getItem('almocoAtivoManual') || 'null');
     if(!ativo){
       const ring = document.getElementById('homeClockRing');
       if(!(ring && ring.classList.contains('mode-done'))) setClockRingProgress(0);
@@ -1659,7 +1723,7 @@
     }
 
     let ativo = null;
-    try{ ativo = JSON.parse(localStorage.getItem('almocoAtivo') || 'null'); }catch(_){}
+    try{ ativo = JSON.parse(localStorage.getItem('almocoAtivoManual') || 'null'); }catch(_){}
     if(ativo && ativo.retorno){
       scheduleReturnNotification(ativo.retorno);
     }
@@ -1783,14 +1847,14 @@
       saidaFinal:item.saidaFinal || item.exit || null,
       scheduleStart:item.scheduleStart || schedule.start,
       scheduleEnd:item.scheduleEnd || schedule.end,
-      scheduleBreak:item.scheduleBreak || localStorage.getItem('seniorScheduleBreak') || null,
+      scheduleBreak:item.scheduleBreak || localStorage.getItem('manualScheduleBreak') || null,
       origem:item.origem || 'App'
     };
   }
 
   function salvarHistorico(saida,retorno,dataRegistro,origem){
     if(!saida || !retorno) return;
-    let historico = JSON.parse(localStorage.getItem('historicoAlmoco') || '[]');
+    let historico = JSON.parse(localStorage.getItem('historicoAlmocoManual') || '[]');
     const dataFinal = dataRegistro || new Date().toLocaleDateString('pt-BR');
     const registro = {
       data:dataFinal,
@@ -1813,14 +1877,14 @@
     }
 
     historico = historico.slice(0,60);
-    localStorage.setItem('historicoAlmoco',JSON.stringify(historico));
+    localStorage.setItem('historicoAlmocoManual',JSON.stringify(historico));
     mostrarHistorico();
     atualizarEstatisticas();
   }
 
   function salvarHistoricoJornada(entrada,saidaAlmoco,retorno,saidaFinal,dataRegistro,origem){
     if(!entrada && !saidaAlmoco && !retorno && !saidaFinal) return;
-    let historico = JSON.parse(localStorage.getItem('historicoAlmoco') || '[]');
+    let historico = JSON.parse(localStorage.getItem('historicoAlmocoManual') || '[]');
     const dataFinal = dataRegistro || new Date().toLocaleDateString('pt-BR');
     const schedule = getExpectedSchedule();
     const registro = {
@@ -1832,7 +1896,7 @@
       saidaFinal:saidaFinal || null,
       scheduleStart:schedule.start,
       scheduleEnd:schedule.end,
-      scheduleBreak:localStorage.getItem('seniorScheduleBreak') || null,
+      scheduleBreak:localStorage.getItem('manualScheduleBreak') || null,
       origem:origem || 'Senior'
     };
 
@@ -1846,7 +1910,7 @@
     }
 
     historico = historico.slice(0,60);
-    localStorage.setItem('historicoAlmoco',JSON.stringify(historico));
+    localStorage.setItem('historicoAlmocoManual',JSON.stringify(historico));
     mostrarHistorico();
     atualizarEstatisticas();
   }
@@ -1886,7 +1950,7 @@
 
   function mostrarHistorico(){
     let historico = [];
-    try{ historico = JSON.parse(localStorage.getItem('historicoAlmoco') || '[]'); }catch(_){ historico = []; }
+    try{ historico = JSON.parse(localStorage.getItem('historicoAlmocoManual') || '[]'); }catch(_){ historico = []; }
     historico = Array.isArray(historico) ? historico.map(normalizeHistoryRecord) : [];
 
     const lista = document.getElementById('historyList');
@@ -1973,8 +2037,8 @@
 
   function limparHistorico(){
     if(!confirm('Deseja apagar todo o histórico?')) return;
-    localStorage.removeItem('historicoAlmoco');
-    localStorage.removeItem('almocoAtivo');
+    localStorage.removeItem('historicoAlmocoManual');
+    localStorage.removeItem('almocoAtivoManual');
     mostrarHistorico();
     atualizarEstatisticas();
     document.getElementById('sumLunchOut').textContent = '--:--';
@@ -2154,7 +2218,7 @@
 
   function atualizarEstatisticas(){
     let historico = [];
-    try{ historico = JSON.parse(localStorage.getItem('historicoAlmoco') || '[]'); }catch(_){ historico = []; }
+    try{ historico = JSON.parse(localStorage.getItem('historicoAlmocoManual') || '[]'); }catch(_){ historico = []; }
     historico = Array.isArray(historico) ? historico.map(normalizeHistoryRecord) : [];
 
     const filtrado = historico.filter(function(item){ return statsRecordMatchesFilter(item,statsFilter); });
@@ -2216,7 +2280,7 @@
   }
 
   function restaurarEstado(){
-    const savedFirstName = localStorage.getItem('seniorFirstName');
+    const savedFirstName = localStorage.getItem('manualFirstName');
     if(savedFirstName){
       const greet = document.getElementById('greetMain');
       if(greet) greet.textContent = 'Olá, ' + savedFirstName + '!';
@@ -2231,11 +2295,11 @@
 
     // Ao abrir em um novo dia, nunca reaproveita batidas/intervalo do dia anterior.
     const hoje = new Date().toLocaleDateString('pt-BR');
-    let ativo = JSON.parse(localStorage.getItem('almocoAtivo') || 'null');
+    let ativo = JSON.parse(localStorage.getItem('almocoAtivoManual') || 'null');
     if(ativo && ativo.data){
       const dataAtivo = new Date(ativo.data);
       if(Number.isNaN(dataAtivo.getTime()) || dataAtivo.toLocaleDateString('pt-BR') !== hoje){
-        localStorage.removeItem('almocoAtivo');
+        localStorage.removeItem('almocoAtivoManual');
         ativo = null;
       }
     }
@@ -2259,7 +2323,7 @@
       ultimoRetornoMinuto = rp[1];
     }
 
-    const hist = JSON.parse(localStorage.getItem('historicoAlmoco') || '[]');
+    const hist = JSON.parse(localStorage.getItem('historicoAlmocoManual') || '[]');
     if(hist.length && hist[0].data === hoje){
       document.getElementById('sumLunchOut').textContent = hist[0].saida || '--:--';
       document.getElementById('sumReturn').textContent = hist[0].retorno || '--:--';
@@ -2477,10 +2541,10 @@
     if(hasNativeSeniorBridge()){
       if(typeof window.AndroidManual.clearSession === 'function') window.AndroidManual.clearSession();
       localStorage.removeItem('seniorSessionKnown');
-      localStorage.removeItem('seniorFirstName');
-      localStorage.removeItem('seniorScheduleStart');
-      localStorage.removeItem('seniorScheduleEnd');
-      localStorage.removeItem('seniorScheduleBreak');
+      localStorage.removeItem('manualFirstName');
+      localStorage.removeItem('manualScheduleStart');
+      localStorage.removeItem('manualScheduleEnd');
+      localStorage.removeItem('manualScheduleBreak');
       const greet = document.getElementById('greetMain');
       if(greet) greet.textContent = 'Olá!';
       seniorConnected = false;
@@ -2500,9 +2564,10 @@
   }
 
   function calcReturnFromTime(saida){
-    const p = saida.split(':').map(Number);
-    if(p.length < 2 || Number.isNaN(p[0]) || Number.isNaN(p[1])) return null;
-    let total = (p[0]*60+p[1]+getLunchIntervalMinutes())%(24*60);
+    const p = String(saida || '').split(':').map(Number);
+    const lunchMinutes = getLunchIntervalMinutes();
+    if(p.length < 2 || Number.isNaN(p[0]) || Number.isNaN(p[1]) || lunchMinutes <= 0) return null;
+    let total = (p[0]*60+p[1]+lunchMinutes)%(24*60);
     return pad(Math.floor(total/60))+':'+pad(total%60);
   }
 
@@ -2510,14 +2575,14 @@
     const retorno = calcReturnFromTime(saida);
     if(!retorno) return;
 
-    const current = JSON.parse(localStorage.getItem('almocoAtivo') || 'null');
+    const current = JSON.parse(localStorage.getItem('almocoAtivoManual') || 'null');
     const today = new Date().toLocaleDateString('pt-BR');
 
     if(current && current.saida === saida){
       return;
     }
 
-    localStorage.setItem('almocoAtivo',JSON.stringify({
+    localStorage.setItem('almocoAtivoManual',JSON.stringify({
       saida:saida,
       retorno:retorno,
       data:new Date().toISOString(),
@@ -2562,9 +2627,10 @@
   }
 
   function getExpectedSchedule(){
-    const start = localStorage.getItem('seniorScheduleStart') || '08:00';
-    const end = localStorage.getItem('seniorScheduleEnd') || '18:00';
-    return {start:start,end:end};
+    return {
+      start:localStorage.getItem('manualScheduleStart') || null,
+      end:localStorage.getItem('manualScheduleEnd') || null
+    };
   }
 
   function calculateExpectedWorkEnd(){
@@ -2574,10 +2640,19 @@
 
   function updateScheduledWorkCard(){
     const schedule = getExpectedSchedule();
-    document.getElementById('mainActionTitle').textContent = 'Saída prevista do trabalho';
-    document.getElementById('mainActionSub').textContent =
-      'Prevista para ' + schedule.end + ' • entrada prevista ' + schedule.start;
-    document.querySelector('.main-action').onclick = function(){ goView('home'); };
+    const card = document.querySelector('.main-action');
+    if(!card) return;
+
+    if(schedule.start && schedule.end){
+      document.getElementById('mainActionTitle').textContent = 'Período de trabalho';
+      document.getElementById('mainActionSub').textContent =
+        schedule.start + ' → ' + schedule.end + ' • almoço ' +
+        (getLunchIntervalMinutes() > 0 ? formatIntervalDuration(getLunchIntervalMinutes()) : 'não definido');
+    } else {
+      document.getElementById('mainActionTitle').textContent = 'Defina seu período de trabalho';
+      document.getElementById('mainActionSub').textContent = 'Escolha entrada, saída e tempo de almoço';
+    }
+    card.onclick = openManualScheduleModal;
   }
 
   function applySeniorIdentityAndSchedule(data){
@@ -2585,19 +2660,19 @@
       const clean = String(data.firstName).trim();
       if(clean){
         const formatted = clean.charAt(0).toUpperCase() + clean.slice(1).toLowerCase();
-        localStorage.setItem('seniorFirstName', formatted);
+        localStorage.setItem('manualFirstName', formatted);
         const greet = document.getElementById('greetMain');
         if(greet) greet.textContent = 'Olá, ' + formatted + '!';
       }
     } else {
-      const saved = localStorage.getItem('seniorFirstName');
+      const saved = localStorage.getItem('manualFirstName');
       const greet = document.getElementById('greetMain');
       if(greet) greet.textContent = saved ? ('Olá, ' + saved + '!') : 'Olá!';
     }
 
-    if(data && data.scheduleStart) localStorage.setItem('seniorScheduleStart', data.scheduleStart);
-    if(data && data.scheduleEnd) localStorage.setItem('seniorScheduleEnd', data.scheduleEnd);
-    if(data && data.scheduleBreak) localStorage.setItem('seniorScheduleBreak', data.scheduleBreak);
+    if(data && data.scheduleStart) localStorage.setItem('manualScheduleStart', data.scheduleStart);
+    if(data && data.scheduleEnd) localStorage.setItem('manualScheduleEnd', data.scheduleEnd);
+    if(data && data.scheduleBreak) localStorage.setItem('manualScheduleBreak', data.scheduleBreak);
 
     refreshIntervalUI();
     updateScheduledWorkCard();
@@ -2606,9 +2681,9 @@
   function sanitizeSeniorClockings(data){
     const rawTimes = Array.isArray(data && data.times) ? data.times.filter(Boolean) : [];
     const evidence = Array.isArray(data && data.evidence) ? data.evidence : [];
-    const scheduleStart = (data && data.scheduleStart) || localStorage.getItem('seniorScheduleStart');
-    const scheduleEnd = (data && data.scheduleEnd) || localStorage.getItem('seniorScheduleEnd');
-    const scheduleBreak = (data && data.scheduleBreak) || localStorage.getItem('seniorScheduleBreak');
+    const scheduleStart = (data && data.scheduleStart) || localStorage.getItem('manualScheduleStart');
+    const scheduleEnd = (data && data.scheduleEnd) || localStorage.getItem('manualScheduleEnd');
+    const scheduleBreak = (data && data.scheduleBreak) || localStorage.getItem('manualScheduleBreak');
 
     let cleaned = rawTimes.map(function(time,index){
       return {time:time,evidence:String(evidence[index] || '')};
@@ -2707,7 +2782,8 @@
       setClockRingProgress(0);
       document.getElementById('workState').textContent = 'AGUARDANDO ENTRADA';
       document.getElementById('clockMeta').innerHTML =
-        'Entrada prevista ' + expectedWorkStart + '<br>Saída prevista ' + expectedWorkEnd;
+        (expectedWorkStart ? 'Entrada prevista ' + expectedWorkStart : 'Entrada ainda não definida') +
+        '<br>' + (expectedWorkEnd ? 'Saída prevista ' + expectedWorkEnd : 'Saída ainda não definida');
     }
 
     if(entry && !lunchOut){
@@ -2719,7 +2795,19 @@
     }
 
     if(lunchOut && !lunchReturn){
-      renderLunchClock(lunchOut,calcReturnFromTime(lunchOut) || '--:--');
+      const predictedReturn = calcReturnFromTime(lunchOut);
+      if(predictedReturn){
+        renderLunchClock(lunchOut,predictedReturn);
+      } else {
+        setClockRingProgress(0);
+        document.getElementById('workState').textContent = 'ALMOÇO INICIADO';
+        document.getElementById('currentTime').textContent = lunchOut;
+        document.getElementById('clockMeta').innerHTML =
+          'Defina o tempo de almoço<br>para calcular o retorno';
+        document.getElementById('mainActionTitle').textContent = 'Definir tempo de almoço';
+        document.getElementById('mainActionSub').textContent = 'Toque para configurar o intervalo de hoje';
+        document.querySelector('.main-action').onclick = openManualScheduleModal;
+      }
     }
 
     if(lunchReturn && !exit){
@@ -2731,7 +2819,7 @@
       document.getElementById('clockMeta').innerHTML =
         'Retorno registrado ' + lunchReturn +
         (expectedWorkEnd ? '<br>Saída prevista ' + expectedWorkEnd : '');
-      localStorage.removeItem('almocoAtivo');
+      localStorage.removeItem('almocoAtivoManual');
     }
 
     if(exit){
@@ -2739,7 +2827,7 @@
         window.AndroidManual.cancelReturnAlarms();
       }
       renderFinishedClock(exit,expectedWorkEnd);
-      localStorage.removeItem('almocoAtivo');
+      localStorage.removeItem('almocoAtivoManual');
     }
 
     return times;
@@ -2877,6 +2965,12 @@
   }
   function manualPunch(){
     const times=loadManualTimes(); if(times.length>=4)return;
+    const schedule=getExpectedSchedule();
+    if(!schedule.start || !schedule.end || getLunchIntervalMinutes() <= 0){
+      openManualScheduleModal();
+      showToast('Defina sua jornada antes da primeira marcação.');
+      return;
+    }
     const now=new Date(),value=pad(now.getHours())+':'+pad(now.getMinutes()),names=['entrada','saída para almoço','retorno do almoço','saída'];
     if(!confirm('Registrar '+names[times.length]+' às '+value+'?'))return;
     times.push(value); saveManualTimes(times); applySeniorEvents(manualEvents(times)); updateManualClockUI(); showToast('Marcação registrada às '+value+'.');
@@ -2887,17 +2981,82 @@
     if(!values.every(function(v){return /^([01]\d|2[0-3]):[0-5]\d$/.test(v);})){alert('Use horários no formato HH:MM separados por vírgula.');return;}
     saveManualTimes(values); applySeniorEvents(manualEvents(values)); updateManualClockUI(); showToast('Horários manuais atualizados.');
   }
-  function configureManualSchedule(){
-    const name=prompt('Seu primeiro nome:',localStorage.getItem('seniorFirstName')||'');
-    if(name!==null&&name.trim()){const c=name.trim().split(/\s+/)[0];localStorage.setItem('seniorFirstName',c.charAt(0).toUpperCase()+c.slice(1).toLowerCase());}
-    const schedule=getExpectedSchedule(),start=prompt('Horário previsto de entrada (HH:MM):',schedule.start); if(start===null)return;
-    const end=prompt('Horário previsto de saída (HH:MM):',schedule.end); if(end===null)return;
-    const lunch=prompt('Duração prevista do almoço (HH:MM):',localStorage.getItem('seniorScheduleBreak')||'01:12'); if(lunch===null)return;
-    if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(start)||!/^([01]\d|2[0-3]):[0-5]\d$/.test(end)||!/^\d{1,2}:[0-5]\d$/.test(lunch)){alert('Confira os horários. Use o formato HH:MM.');return;}
-    localStorage.setItem('seniorScheduleStart',start);localStorage.setItem('seniorScheduleEnd',end);localStorage.setItem('seniorScheduleBreak',lunch);
-    restaurarEstado();applySeniorEvents(manualEvents(loadManualTimes()));updateManualClockUI();showToast('Configuração da jornada atualizada.');
+  function openManualScheduleModal(){
+    const modal = document.getElementById('manualScheduleModal');
+    const schedule = getExpectedSchedule();
+    const name = document.getElementById('manualNameInput');
+    const start = document.getElementById('manualStartInput');
+    const end = document.getElementById('manualEndInput');
+    const lunch = document.getElementById('manualBreakInput');
+
+    if(name) name.value = localStorage.getItem('manualFirstName') || '';
+    if(start) start.value = schedule.start || '';
+    if(end) end.value = schedule.end || '';
+    if(lunch) lunch.value = localStorage.getItem('manualScheduleBreak') || '';
+    if(modal) modal.classList.add('show');
   }
-  function initManualMode(){ applySeniorEvents(manualEvents(loadManualTimes())); updateManualClockUI(); }
+
+  function closeManualScheduleModal(event){
+    if(event && event.target !== event.currentTarget) return;
+    const modal = document.getElementById('manualScheduleModal');
+    if(modal) modal.classList.remove('show');
+  }
+
+  function updateManualScheduleSummary(){
+    const schedule = getExpectedSchedule();
+    const lunch = getLunchIntervalMinutes();
+    const startView = document.getElementById('manualScheduleStartView');
+    const endView = document.getElementById('manualScheduleEndView');
+    const breakView = document.getElementById('manualScheduleBreakView');
+    if(startView) startView.textContent = schedule.start || '--:--';
+    if(endView) endView.textContent = schedule.end || '--:--';
+    if(breakView) breakView.textContent = lunch > 0 ? formatIntervalDuration(lunch) : 'Definir';
+  }
+
+  function saveManualSchedule(){
+    const name = (document.getElementById('manualNameInput').value || '').trim();
+    const start = document.getElementById('manualStartInput').value || '';
+    const end = document.getElementById('manualEndInput').value || '';
+    const lunch = document.getElementById('manualBreakInput').value || '';
+
+    if(!start || !end || !lunch){
+      alert('Escolha a entrada, a saída e o tempo de almoço.');
+      return;
+    }
+
+    if(name){
+      const first = name.split(/\s+/)[0];
+      localStorage.setItem('manualFirstName',first.charAt(0).toUpperCase()+first.slice(1).toLowerCase());
+    }
+
+    localStorage.setItem('manualScheduleStart',start);
+    localStorage.setItem('manualScheduleEnd',end);
+    localStorage.setItem('manualScheduleBreak',lunch);
+
+    closeManualScheduleModal();
+    refreshIntervalUI();
+    updateScheduledWorkCard();
+    updateManualScheduleSummary();
+    const greet = document.getElementById('greetMain');
+    const savedName = localStorage.getItem('manualFirstName');
+    if(greet && savedName) greet.textContent = 'Olá, ' + savedName + '!';
+    applySeniorEvents(manualEvents(loadManualTimes()));
+    showToast('Jornada configurada.');
+  }
+
+  function configureManualSchedule(){
+    openManualScheduleModal();
+  }
+
+  function initManualMode(){
+    applySeniorEvents(manualEvents(loadManualTimes()));
+    updateManualClockUI();
+    updateManualScheduleSummary();
+    const schedule = getExpectedSchedule();
+    if(!schedule.start || !schedule.end || getLunchIntervalMinutes() <= 0){
+      setTimeout(openManualScheduleModal,450);
+    }
+  }
 
   async function initSenior(){
     if(hasNativeSeniorBridge()){
