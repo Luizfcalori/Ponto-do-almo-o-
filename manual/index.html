@@ -2257,20 +2257,52 @@
           }
           return '<div class="history-balance delay"><span>Atraso</span><strong>-' + formatMinutesCompact(Math.abs(balance)) + '</strong></div>';
         })() +
-        '<div class="history-note">Cálculo informativo do app, com tolerância de 5 min na entrada e na saída. O fechamento oficial pode seguir regras da empresa/Senior.</div>';
+        '<div class="history-note">Cálculo informativo do app, com tolerância de 5 min na entrada e na saída. O fechamento oficial pode seguir regras da empresa.</div>';
       lista.appendChild(item);
     });
   }
 
   function limparHistorico(){
-    if(!confirm('Deseja apagar todo o histórico?')) return;
+    if(!confirm('Deseja apagar todo o histórico e as marcações manuais salvas?')) return;
+
     localStorage.removeItem('historicoAlmocoManual');
     localStorage.removeItem('almocoAtivoManual');
-    mostrarHistorico();
-    atualizarEstatisticas();
+
+    // As marcações do modo manual ficam separadas por dia. Se permanecerem salvas,
+    // o app recria o histórico ao recarregar a página.
+    const manualKeys = [];
+    for(let i=0;i<localStorage.length;i++){
+      const key = localStorage.key(i);
+      if(key && key.indexOf('manualClockings:') === 0) manualKeys.push(key);
+    }
+    manualKeys.forEach(function(key){ localStorage.removeItem(key); });
+
+    if(window.AndroidManual && typeof window.AndroidManual.cancelReturnAlarms === 'function'){
+      window.AndroidManual.cancelReturnAlarms();
+    }
+
+    ultimoRetornoHora = null;
+    ultimoRetornoMinuto = null;
+
+    document.getElementById('sumEntry').textContent = '--:--';
     document.getElementById('sumLunchOut').textContent = '--:--';
     document.getElementById('sumReturn').textContent = '--:--';
-    showToast('Histórico apagado.');
+    document.getElementById('sumExit').textContent = '--:--';
+
+    const exitInput = document.getElementById('exitTime');
+    if(exitInput) exitInput.value = '';
+    const lunchOutBig = document.getElementById('lunchOutBig');
+    if(lunchOutBig) lunchOutBig.textContent = '--:--';
+    const returnTime = document.getElementById('returnTime');
+    if(returnTime) returnTime.textContent = '--:--';
+    const progress = document.getElementById('progressCard');
+    if(progress) progress.style.display = 'none';
+
+    applySeniorEvents([]);
+    updateManualClockUI();
+    mostrarHistorico();
+    atualizarEstatisticas();
+    showToast('Histórico e marcações manuais apagados.');
   }
 
   function mediaHorarios(lista,chave){
@@ -2541,13 +2573,15 @@
       document.getElementById('lunchHeroTitle').textContent = 'Almoço iniciado!';
       document.getElementById('lunchHeroText').textContent = 'Seu último horário de almoço está sendo acompanhado neste aparelho.';
       document.getElementById('sumLunchOut').textContent = ativo.saida;
-      document.getElementById('sumReturn').textContent = ativo.retorno;
-      renderLunchClock(ativo.saida,ativo.retorno);
+      document.getElementById('sumReturn').textContent = '--:--';
+      if(ativo.retorno) renderLunchClock(ativo.saida,ativo.retorno);
       setGreetingMessage('Bom almoço!');
 
-      const rp = ativo.retorno.split(':').map(Number);
-      ultimoRetornoHora = rp[0];
-      ultimoRetornoMinuto = rp[1];
+      if(ativo.retorno){
+        const rp = ativo.retorno.split(':').map(Number);
+        ultimoRetornoHora = rp[0];
+        ultimoRetornoMinuto = rp[1];
+      }
     }
 
     const hist = JSON.parse(localStorage.getItem('historicoAlmocoManual') || '[]');
@@ -2558,7 +2592,7 @@
 
     refreshIntervalUI();
     updateScheduledWorkCard();
-    if(ativo) renderLunchClock(ativo.saida,ativo.retorno);
+    if(ativo && ativo.retorno) renderLunchClock(ativo.saida,ativo.retorno);
 
     mostrarHistorico();
     atualizarEstatisticas();
