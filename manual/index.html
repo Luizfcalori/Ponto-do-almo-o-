@@ -572,6 +572,7 @@
     .manual-clock-title{font-size:12.5px;font-weight:900}
     .manual-clock-sub{font-size:9.6px;color:#64748b;margin-top:2px;line-height:1.35}
     .manual-clock-badge{padding:5px 8px;border-radius:99px;background:#eef8f4;color:#0b8f62;font-size:9px;font-weight:900;white-space:nowrap}
+    .manual-clock-badge.off{background:#eef2f6;color:#64748b}
     .manual-punch-btn{width:100%;border:0;border-radius:13px;margin-top:10px;padding:11px 12px;background:linear-gradient(135deg,#ff7000,#ff8e24);color:#fff;font-size:12px;font-weight:900;box-shadow:0 8px 18px rgba(255,122,0,.20)}
     .manual-punch-btn.done{background:#eafaf3;color:#087653;box-shadow:none}
     .manual-edit-btn{width:100%;border:0;background:transparent;color:#64748b;padding:8px 4px 2px;font-size:9.5px;font-weight:800}
@@ -633,7 +634,13 @@
     .weekly-day-card.weekly-today{border-color:#94ddc2;box-shadow:0 0 0 1px rgba(22,199,132,.10)}
     .weekly-day-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}
     .weekly-day-name{font-size:11px;font-weight:950;color:#0f172a}
-    .weekly-day-off{border:0;background:transparent;color:#64748b;font-size:8.5px;font-weight:850;padding:4px}
+    .weekly-day-off{
+      border:1px solid #dbe4ec;background:#fff;color:#64748b;font-size:8.5px;font-weight:850;
+      padding:6px 8px;border-radius:9px
+    }
+    .weekly-day-off.active{background:#eef2f6;color:#334155;border-color:#cbd5e1}
+    .weekly-day-card.is-off{background:#f3f5f7;border-color:#dbe1e7}
+    .weekly-day-card.is-off .weekly-time-field{opacity:.45}
     .weekly-day-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
     .weekly-time-field label{display:block;font-size:7.7px;color:#7b8a9b;font-weight:800;margin-bottom:4px}
     .weekly-time-field input{
@@ -732,13 +739,7 @@
           </div>
           <div class="manual-clock-badge" id="manualClockBadge">0/4</div>
         </div>
-        <div class="manual-schedule-summary" id="manualScheduleSummary">
-          <span>Entrada <b id="manualScheduleStartView">--:--</b></span>
-          <span>Almoço <b id="manualScheduleLunchOutView">--:--</b></span>
-          <span>Retorno <b id="manualScheduleReturnView">--:--</b></span>
-          <span>Saída <b id="manualScheduleEndView">--:--</b></span>
-        </div>
-        <button class="manual-schedule-btn" onclick="openManualScheduleModal()">Definir horários da jornada</button>
+        <button class="manual-schedule-btn" onclick="openManualScheduleModal()">Configurar jornada semanal</button>
 
         <div class="manual-marks-title">Marcações de hoje</div>
         <div class="manual-marks-grid">
@@ -1093,7 +1094,7 @@
         <div class="weekly-day-card" id="weekly-card-mon">
           <div class="weekly-day-head">
             <div class="weekly-day-name">Segunda-feira</div>
-            <button class="weekly-day-off" onclick="clearWeeklyDay('mon')">Folga / limpar</button>
+            <button class="weekly-day-off" id="wk-mon-off-btn" onclick="toggleWeeklyDayOff('mon')">Marcar folga</button>
           </div>
           <div class="weekly-day-grid">
             <div class="weekly-time-field"><label>Entrada</label><input type="time" id="wk-mon-start"></div>
@@ -1105,7 +1106,7 @@
         <div class="weekly-day-card" id="weekly-card-tue">
           <div class="weekly-day-head">
             <div class="weekly-day-name">Terça-feira</div>
-            <button class="weekly-day-off" onclick="clearWeeklyDay('tue')">Folga / limpar</button>
+            <button class="weekly-day-off" id="wk-tue-off-btn" onclick="toggleWeeklyDayOff('tue')">Marcar folga</button>
           </div>
           <div class="weekly-day-grid">
             <div class="weekly-time-field"><label>Entrada</label><input type="time" id="wk-tue-start"></div>
@@ -1117,7 +1118,7 @@
         <div class="weekly-day-card" id="weekly-card-wed">
           <div class="weekly-day-head">
             <div class="weekly-day-name">Quarta-feira</div>
-            <button class="weekly-day-off" onclick="clearWeeklyDay('wed')">Folga / limpar</button>
+            <button class="weekly-day-off" id="wk-wed-off-btn" onclick="toggleWeeklyDayOff('wed')">Marcar folga</button>
           </div>
           <div class="weekly-day-grid">
             <div class="weekly-time-field"><label>Entrada</label><input type="time" id="wk-wed-start"></div>
@@ -1129,7 +1130,7 @@
         <div class="weekly-day-card" id="weekly-card-thu">
           <div class="weekly-day-head">
             <div class="weekly-day-name">Quinta-feira</div>
-            <button class="weekly-day-off" onclick="clearWeeklyDay('thu')">Folga / limpar</button>
+            <button class="weekly-day-off" id="wk-thu-off-btn" onclick="toggleWeeklyDayOff('thu')">Marcar folga</button>
           </div>
           <div class="weekly-day-grid">
             <div class="weekly-time-field"><label>Entrada</label><input type="time" id="wk-thu-start"></div>
@@ -1141,7 +1142,7 @@
         <div class="weekly-day-card" id="weekly-card-fri">
           <div class="weekly-day-head">
             <div class="weekly-day-name">Sexta-feira</div>
-            <button class="weekly-day-off" onclick="clearWeeklyDay('fri')">Folga / limpar</button>
+            <button class="weekly-day-off" id="wk-fri-off-btn" onclick="toggleWeeklyDayOff('fri')">Marcar folga</button>
           </div>
           <div class="weekly-day-grid">
             <div class="weekly-time-field"><label>Entrada</label><input type="time" id="wk-fri-start"></div>
@@ -1153,7 +1154,7 @@
         <div class="weekly-day-card" id="weekly-card-sat">
           <div class="weekly-day-head">
             <div class="weekly-day-name">Sábado</div>
-            <button class="weekly-day-off" onclick="clearWeeklyDay('sat')">Folga / limpar</button>
+            <button class="weekly-day-off" id="wk-sat-off-btn" onclick="toggleWeeklyDayOff('sat')">Marcar folga</button>
           </div>
           <div class="weekly-day-grid">
             <div class="weekly-time-field"><label>Entrada</label><input type="time" id="wk-sat-start"></div>
@@ -1165,7 +1166,7 @@
         <div class="weekly-day-card" id="weekly-card-sun">
           <div class="weekly-day-head">
             <div class="weekly-day-name">Domingo</div>
-            <button class="weekly-day-off" onclick="clearWeeklyDay('sun')">Folga / limpar</button>
+            <button class="weekly-day-off" id="wk-sun-off-btn" onclick="toggleWeeklyDayOff('sun')">Marcar folga</button>
           </div>
           <div class="weekly-day-grid">
             <div class="weekly-time-field"><label>Entrada</label><input type="time" id="wk-sun-start"></div>
@@ -1177,7 +1178,7 @@
       </div>
 
       <div class="schedule-help">
-        Preencha Entrada, Saída para almoço, Retorno e Saída em cada dia trabalhado. Deixe os quatro campos vazios nos dias de folga. O retorno é só previsto; a marcação real continua sempre manual.
+        Em cada dia, preencha Entrada, Saída para almoço, Retorno e Saída, ou toque em “Marcar folga”. Assim a semana inteira fica definida. O retorno previsto nunca vira marcação automática: a marcação real continua manual.
       </div>
 
       <button class="btn btn-orange" onclick="saveManualSchedule()">Salvar semana</button>
@@ -2910,6 +2911,14 @@
     const hasWeeklyPlan = Object.keys(weekly).length > 0;
     const day = weekly[key];
 
+    if(day && day.off){
+      return {
+        key:key,label:WEEK_DAY_LABELS[key],
+        start:null,lunchOut:null,lunchReturn:null,end:null,
+        weekly:true,off:true,configured:true
+      };
+    }
+
     if(day && (day.start || day.lunchOut || day.lunchReturn || day.end)){
       return {
         key:key,label:WEEK_DAY_LABELS[key],
@@ -2917,7 +2926,7 @@
         lunchOut:day.lunchOut || null,
         lunchReturn:day.lunchReturn || null,
         end:day.end || null,
-        weekly:true,off:false
+        weekly:true,off:false,configured:true
       };
     }
 
@@ -2925,7 +2934,7 @@
       return {
         key:key,label:WEEK_DAY_LABELS[key],
         start:null,lunchOut:null,lunchReturn:null,end:null,
-        weekly:true,off:true
+        weekly:true,off:false,configured:false
       };
     }
 
@@ -2934,7 +2943,7 @@
       start:localStorage.getItem('manualScheduleStart') || null,
       lunchOut:null,lunchReturn:null,
       end:localStorage.getItem('manualScheduleEnd') || null,
-      weekly:false,off:false
+      weekly:false,off:false,configured:false
     };
   }
 
@@ -2953,11 +2962,11 @@
       document.getElementById('mainActionSub').textContent =
         schedule.start + ' • almoço ' + schedule.lunchOut + '–' + schedule.lunchReturn + ' • saída ' + schedule.end;
     } else if(schedule.off){
-      document.getElementById('mainActionTitle').textContent = 'Folga prevista • ' + schedule.label.toLowerCase();
-      document.getElementById('mainActionSub').textContent = 'Sem jornada configurada para hoje';
+      document.getElementById('mainActionTitle').textContent = 'Folga hoje • ' + schedule.label.toLowerCase();
+      document.getElementById('mainActionSub').textContent = 'Dia marcado como folga na sua jornada semanal';
     } else {
-      document.getElementById('mainActionTitle').textContent = 'Configure sua jornada semanal';
-      document.getElementById('mainActionSub').textContent = 'Defina os horários de segunda a domingo';
+      document.getElementById('mainActionTitle').textContent = 'Jornada de ' + schedule.label.toLowerCase() + ' não configurada';
+      document.getElementById('mainActionSub').textContent = 'Defina os horários ou marque este dia como folga';
     }
     card.onclick = openManualScheduleModal;
   }
@@ -3281,20 +3290,39 @@
 
   function updateManualClockUI(){
     const times = loadManualTimes();
+    const schedule = getExpectedSchedule();
     const sub = document.getElementById('manualClockSub');
     const badge = document.getElementById('manualClockBadge');
+    const actionButtons = document.querySelectorAll('.manual-mark-actions button');
 
-    if(badge) badge.textContent = times.length + '/4';
+    if(badge){
+      badge.classList.toggle('off',!!schedule.off);
+      badge.textContent = schedule.off ? 'FOLGA' : (times.length + '/4');
+    }
 
     for(let i=0;i<4;i++){
       const input = document.getElementById('manualMark'+i);
-      if(input) input.value = times[i] || '';
+      if(input){
+        input.value = times[i] || '';
+        input.disabled = !!schedule.off || schedule.configured === false;
+      }
     }
 
+    actionButtons.forEach(function(btn){
+      btn.disabled = !!schedule.off || schedule.configured === false;
+      btn.style.opacity = btn.disabled ? '.45' : '1';
+    });
+
     if(sub){
-      sub.textContent = times.length >= 4
-        ? 'Jornada de hoje concluída. Você ainda pode corrigir qualquer horário abaixo.'
-        : 'Preencha os horários reais ou toque em “Agora” no momento de cada marcação.';
+      if(schedule.off){
+        sub.textContent = 'Hoje está marcado como folga. Não há marcações para preencher.';
+      } else if(schedule.configured === false){
+        sub.textContent = 'Configure a jornada de hoje ou marque o dia como folga.';
+      } else if(times.length >= 4){
+        sub.textContent = 'Jornada de hoje concluída. Estes são os horários reais registrados.';
+      } else {
+        sub.textContent = 'Os campos abaixo são horários reais. Preencha ou toque em “Agora” no momento de cada marcação.';
+      }
     }
 
     updateManualReturnSuggestion();
@@ -3314,9 +3342,13 @@
     if(index < 0 || index > 3) return;
 
     const todaySchedule = getExpectedSchedule();
-    if(!todaySchedule.start || !todaySchedule.lunchOut || !todaySchedule.lunchReturn || !todaySchedule.end){
+    if(todaySchedule.off){
+      showToast('Hoje está marcado como folga.');
+      return;
+    }
+    if(todaySchedule.configured === false || !todaySchedule.start || !todaySchedule.lunchOut || !todaySchedule.lunchReturn || !todaySchedule.end){
       openManualScheduleModal();
-      showToast('Configure os 4 horários previstos de hoje antes da marcação.');
+      showToast('Configure os 4 horários previstos de hoje ou marque como folga.');
       return;
     }
     if(value && !/^([01]\d|2[0-3]):[0-5]\d$/.test(value)){
@@ -3377,33 +3409,66 @@
   function weeklyInputId(key,field){ return 'wk-' + key + '-' + field; }
 
   function readWeeklyDayFromForm(key){
+    const card = document.getElementById('weekly-card-' + key);
+    const off = !!(card && card.dataset.off === '1');
     return {
-      start:(document.getElementById(weeklyInputId(key,'start')).value || ''),
-      lunchOut:(document.getElementById(weeklyInputId(key,'lunchOut')).value || ''),
-      lunchReturn:(document.getElementById(weeklyInputId(key,'lunchReturn')).value || ''),
-      end:(document.getElementById(weeklyInputId(key,'end')).value || '')
+      off:off,
+      start:off ? '' : (document.getElementById(weeklyInputId(key,'start')).value || ''),
+      lunchOut:off ? '' : (document.getElementById(weeklyInputId(key,'lunchOut')).value || ''),
+      lunchReturn:off ? '' : (document.getElementById(weeklyInputId(key,'lunchReturn')).value || ''),
+      end:off ? '' : (document.getElementById(weeklyInputId(key,'end')).value || '')
     };
+  }
+
+  function setWeeklyDayOffState(key,isOff){
+    const card = document.getElementById('weekly-card-' + key);
+    const btn = document.getElementById('wk-' + key + '-off-btn');
+    if(card){
+      card.dataset.off = isOff ? '1' : '0';
+      card.classList.toggle('is-off',!!isOff);
+    }
+    if(btn){
+      btn.classList.toggle('active',!!isOff);
+      btn.textContent = isOff ? '✓ Folga' : 'Marcar folga';
+    }
+    ['start','lunchOut','lunchReturn','end'].forEach(function(field){
+      const el = document.getElementById(weeklyInputId(key,field));
+      if(el){
+        el.disabled = !!isOff;
+        if(isOff) el.value = '';
+      }
+    });
   }
 
   function writeWeeklyDayToForm(key,day){
     day = day || {};
+    const isOff = !!day.off;
+    setWeeklyDayOffState(key,isOff);
     ['start','lunchOut','lunchReturn','end'].forEach(function(field){
       const el = document.getElementById(weeklyInputId(key,field));
-      if(el) el.value = day[field] || '';
+      if(el) el.value = isOff ? '' : (day[field] || '');
     });
   }
 
-  function clearWeeklyDay(key){ writeWeeklyDayToForm(key,{}); }
+  function toggleWeeklyDayOff(key){
+    const card = document.getElementById('weekly-card-' + key);
+    const next = !(card && card.dataset.off === '1');
+    setWeeklyDayOffState(key,next);
+  }
+
+  function clearWeeklyDay(key){
+    writeWeeklyDayToForm(key,{off:false});
+  }
 
   function copyMondayToWeekdays(){
     const monday = readWeeklyDayFromForm('mon');
-    ['tue','wed','thu','fri'].forEach(function(key){ writeWeeklyDayToForm(key,monday); });
+    ['tue','wed','thu','fri'].forEach(function(key){ writeWeeklyDayToForm(key,Object.assign({},monday)); });
     showToast('Segunda copiada para terça a sexta.');
   }
 
   function copyMondayToAll(){
     const monday = readWeeklyDayFromForm('mon');
-    ['tue','wed','thu','fri','sat','sun'].forEach(function(key){ writeWeeklyDayToForm(key,monday); });
+    ['tue','wed','thu','fri','sat','sun'].forEach(function(key){ writeWeeklyDayToForm(key,Object.assign({},monday)); });
     showToast('Segunda copiada para a semana toda.');
   }
 
@@ -3414,7 +3479,7 @@
     if(name) name.value = localStorage.getItem('manualFirstName') || '';
 
     ['mon','tue','wed','thu','fri','sat','sun'].forEach(function(key){
-      writeWeeklyDayToForm(key,weekly[key] || {});
+      writeWeeklyDayToForm(key,weekly[key] || {off:false});
       const card = document.getElementById('weekly-card-' + key);
       if(card) card.classList.toggle('weekly-today',key === weekKeyForDate(new Date()));
     });
@@ -3429,41 +3494,46 @@
   }
 
   function updateManualScheduleSummary(){
-    const schedule = getExpectedSchedule();
-    const startView = document.getElementById('manualScheduleStartView');
-    const lunchView = document.getElementById('manualScheduleLunchOutView');
-    const returnView = document.getElementById('manualScheduleReturnView');
-    const endView = document.getElementById('manualScheduleEndView');
-    if(startView) startView.textContent = schedule.start || '--:--';
-    if(lunchView) lunchView.textContent = schedule.lunchOut || '--:--';
-    if(returnView) returnView.textContent = schedule.lunchReturn || '--:--';
-    if(endView) endView.textContent = schedule.end || '--:--';
+    updateScheduledWorkCard();
   }
 
   function saveManualSchedule(){
     const name = (document.getElementById('manualNameInput').value || '').trim();
     const weekly = {};
     const keys = ['mon','tue','wed','thu','fri','sat','sun'];
-    let configuredDays = 0;
+    let workedDays = 0;
+    let offDays = 0;
 
     for(let i=0;i<keys.length;i++){
       const key = keys[i];
       const day = readWeeklyDayFromForm(key);
+
+      if(day.off){
+        weekly[key] = {off:true};
+        offDays++;
+        continue;
+      }
+
       const values = [day.start,day.lunchOut,day.lunchReturn,day.end];
       const filled = values.filter(Boolean).length;
 
-      if(filled > 0 && filled < 4){
-        alert('Complete os 4 horários de ' + WEEK_DAY_LABELS[key] + ' ou deixe o dia inteiro vazio para folga.');
+      if(filled !== 4){
+        alert('Em ' + WEEK_DAY_LABELS[key] + ', preencha os 4 horários ou marque o dia como folga.');
         return;
       }
-      if(filled === 4){
-        weekly[key] = day;
-        configuredDays++;
-      }
+
+      weekly[key] = {
+        off:false,
+        start:day.start,
+        lunchOut:day.lunchOut,
+        lunchReturn:day.lunchReturn,
+        end:day.end
+      };
+      workedDays++;
     }
 
-    if(configuredDays === 0){
-      alert('Configure pelo menos um dia da semana.');
+    if(workedDays === 0 && offDays === 0){
+      alert('Configure a sua semana.');
       return;
     }
 
@@ -3480,7 +3550,7 @@
     closeManualScheduleModal();
     refreshIntervalUI();
     updateScheduledWorkCard();
-    updateManualScheduleSummary();
+    updateManualClockUI();
     updateManualReturnSuggestion();
 
     const greet = document.getElementById('greetMain');
@@ -3488,7 +3558,7 @@
     if(greet && savedName) greet.textContent = 'Olá, ' + savedName + '!';
 
     applySeniorEvents(manualEvents(loadManualTimes()));
-    showToast('Jornada semanal salva.');
+    showToast('Jornada semanal salva • ' + offDays + (offDays === 1 ? ' folga.' : ' folgas.'));
   }
 
   function configureManualSchedule(){ openManualScheduleModal(); }
@@ -3497,9 +3567,15 @@
     applySeniorEvents(manualEvents(loadManualTimes()));
     updateManualClockUI();
     updateManualScheduleSummary();
+
     const weekly = loadWeeklySchedule();
-    const schedule = getExpectedSchedule();
-    if(Object.keys(weekly).length === 0 && (!schedule.start || !schedule.end)){
+    const allKeys = ['mon','tue','wed','thu','fri','sat','sun'];
+    const completeWeek = allKeys.every(function(key){
+      const day = weekly[key];
+      return !!(day && (day.off || (day.start && day.lunchOut && day.lunchReturn && day.end)));
+    });
+
+    if(!completeWeek){
       setTimeout(openManualScheduleModal,450);
     }
   }
