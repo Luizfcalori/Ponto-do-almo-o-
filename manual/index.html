@@ -404,6 +404,22 @@
     .history-note{
       margin-top:8px;color:#94a3b8;font-size:8.5px;line-height:1.35
     }
+    .history-time-edit{
+      display:inline-flex;align-items:center;justify-content:center;gap:4px;border:0;background:transparent;
+      color:inherit;font:inherit;font-weight:inherit;padding:2px 3px;border-radius:8px
+    }
+    .history-time-edit:active{background:#eef3f7}
+    .history-time-pencil{font-size:8px;color:#94a3b8;line-height:1}
+    .history-record-actions{
+      display:flex;justify-content:flex-end;gap:8px;margin-top:10px;padding-top:9px;border-top:1px solid #edf1f5
+    }
+    .history-day-delete{
+      border:1px solid #f2c9c5;background:#fff7f6;color:#c83f36;border-radius:10px;
+      padding:7px 10px;font-size:9.5px;font-weight:900
+    }
+    .history-edit-help{
+      margin-top:7px;text-align:center;color:#94a3b8;font-size:8.5px
+    }
     .history-actions{display:flex;justify-content:flex-end;margin-top:14px}
     .history-clear{
       border:0;background:transparent;color:#d83c32;font-size:10.5px;font-weight:850;padding:8px 4px
@@ -1234,6 +1250,24 @@
         <button class="btn btn-outline" onclick="syncSeniorClockings(true)">Atualizar marcações</button>
         <button class="btn btn-danger" onclick="disconnectSenior()">Desconectar</button>
       </div>
+    </div>
+  </div>
+
+  <div id="historyTimeEditModal" class="modal-backdrop" onclick="closeHistoryTimeEditor(event)">
+    <div class="modal-card" onclick="event.stopPropagation()">
+      <div class="modal-head">
+        <div>
+          <div class="modal-title">Corrigir horário</div>
+          <div class="modal-sub" id="historyTimeEditSub">Altere somente a marcação selecionada.</div>
+        </div>
+        <button class="modal-close" onclick="closeHistoryTimeEditor()">✕</button>
+      </div>
+      <div class="field" style="margin-top:16px">
+        <label id="historyTimeEditLabel" for="historyTimeEditInput">Horário</label>
+        <input id="historyTimeEditInput" type="time">
+      </div>
+      <button class="btn btn-orange" onclick="saveHistoryTimeEdit()">Salvar correção</button>
+      <button class="btn btn-outline" onclick="closeHistoryTimeEditor()" style="margin-top:8px">Cancelar</button>
     </div>
   </div>
 
@@ -2264,6 +2298,167 @@
     return candidate.getMonth() === today.getMonth() && candidate.getFullYear() === today.getFullYear();
   }
 
+  let historyTimeEditDate = null;
+  let historyTimeEditField = null;
+
+  function historyTimeFieldLabel(field){
+    return {
+      entrada:'Entrada',
+      saidaAlmoco:'Saída para almoço',
+      retorno:'Retorno do almoço',
+      saidaFinal:'Saída'
+    }[field] || 'Horário';
+  }
+
+  function historyRecordTimes(record){
+    record = record || {};
+    return [
+      record.entrada || null,
+      record.saidaAlmoco || record.saida || null,
+      record.retorno || null,
+      record.saidaFinal || record.exit || null
+    ];
+  }
+
+  function syncHistoryRecordClockings(dateValue,record){
+    const key = 'manualClockings:' + dateValue;
+    const values = historyRecordTimes(record);
+    const compact = [];
+    for(let i=0;i<values.length;i++){
+      if(!values[i]) break;
+      compact.push(values[i]);
+    }
+
+    if(compact.length) localStorage.setItem(key,JSON.stringify(compact));
+    else localStorage.removeItem(key);
+
+    if(dateValue === manualToday()){
+      localStorage.removeItem('almocoAtivoManual');
+      applySeniorEvents(manualEvents(compact));
+      updateManualClockUI();
+    }
+  }
+
+  function openHistoryTimeEditor(dateValue,field){
+    let historico = [];
+    try{ historico = JSON.parse(localStorage.getItem('historicoAlmocoManual') || '[]'); }catch(_){ historico = []; }
+    if(!Array.isArray(historico)) return;
+
+    const record = historico.find(function(item){ return item && item.data === dateValue; });
+    if(!record || record.folga) return;
+
+    historyTimeEditDate = dateValue;
+    historyTimeEditField = field;
+
+    const normalized = normalizeHistoryRecord(record);
+    const current = field === 'saidaAlmoco'
+      ? normalized.saidaAlmoco
+      : normalized[field];
+
+    const label = historyTimeFieldLabel(field);
+    const sub = document.getElementById('historyTimeEditSub');
+    const inputLabel = document.getElementById('historyTimeEditLabel');
+    const input = document.getElementById('historyTimeEditInput');
+    const modal = document.getElementById('historyTimeEditModal');
+
+    if(sub) sub.textContent = dateValue + ' • ' + label;
+    if(inputLabel) inputLabel.textContent = label;
+    if(input) input.value = current || '';
+    if(modal) modal.classList.add('show');
+    setTimeout(function(){ if(input) input.focus(); },120);
+  }
+
+  function closeHistoryTimeEditor(event){
+    const modal = document.getElementById('historyTimeEditModal');
+    if(event && modal && event.target !== modal) return;
+    if(modal) modal.classList.remove('show');
+    historyTimeEditDate = null;
+    historyTimeEditField = null;
+  }
+
+  function saveHistoryTimeEdit(){
+    const dateValue = historyTimeEditDate;
+    const field = historyTimeEditField;
+    const input = document.getElementById('historyTimeEditInput');
+    const value = input ? input.value : '';
+
+    if(!dateValue || !field) return;
+    if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(value)){
+      showToast('Informe um horário válido.');
+      return;
+    }
+
+    let historico = [];
+    try{ historico = JSON.parse(localStorage.getItem('historicoAlmocoManual') || '[]'); }catch(_){ historico = []; }
+    if(!Array.isArray(historico)) historico = [];
+
+    const idx = historico.findIndex(function(item){ return item && item.data === dateValue; });
+    if(idx < 0){
+      closeHistoryTimeEditor();
+      showToast('Registro do dia não encontrado.');
+      return;
+    }
+
+    const record = Object.assign({},historico[idx]);
+    record[field] = value;
+    if(field === 'saidaAlmoco') record.saida = value;
+
+    const values = historyRecordTimes(record);
+    const minutes = values.map(minutesFromTime);
+    for(let i=1;i<values.length;i++){
+      if(values[i] && values[i-1] && minutes[i] < minutes[i-1]){
+        showToast('Esse horário quebra a ordem das marcações do dia.');
+        return;
+      }
+    }
+
+    historico[idx] = record;
+    localStorage.setItem('historicoAlmocoManual',JSON.stringify(historico));
+    syncHistoryRecordClockings(dateValue,record);
+
+    closeHistoryTimeEditor();
+    mostrarHistorico();
+    atualizarEstatisticas();
+    showToast(historyTimeFieldLabel(field) + ' corrigida para ' + value + '.');
+  }
+
+  function deleteHistoryDay(dateValue){
+    if(!dateValue) return;
+    if(!confirm('Excluir somente o registro de ' + dateValue + '? Os outros dias serão mantidos.')) return;
+
+    let historico = [];
+    try{ historico = JSON.parse(localStorage.getItem('historicoAlmocoManual') || '[]'); }catch(_){ historico = []; }
+    if(!Array.isArray(historico)) historico = [];
+
+    historico = historico.filter(function(item){ return !(item && item.data === dateValue); });
+    if(historico.length) localStorage.setItem('historicoAlmocoManual',JSON.stringify(historico));
+    else localStorage.removeItem('historicoAlmocoManual');
+
+    localStorage.removeItem('manualClockings:' + dateValue);
+    localStorage.removeItem('manualDayOff:' + dateValue);
+
+    if(dateValue === manualToday()){
+      localStorage.removeItem('almocoAtivoManual');
+      if(window.AndroidManual && typeof window.AndroidManual.cancelReturnAlarms === 'function'){
+        window.AndroidManual.cancelReturnAlarms();
+      }
+      applySeniorEvents([]);
+      updateManualClockUI();
+    }
+
+    mostrarHistorico();
+    atualizarEstatisticas();
+    showToast('Registro de ' + dateValue + ' excluído.');
+  }
+
+  function historyEditableTime(dateValue,field,value){
+    const safe = value || '--:--';
+    if(!value) return safe;
+    return '<button class="history-time-edit" onclick="openHistoryTimeEditor(\'' +
+      dateValue + '\',\'' + field + '\')" aria-label="Corrigir ' +
+      historyTimeFieldLabel(field) + '"><span>' + safe + '</span><span class="history-time-pencil">✎</span></button>';
+  }
+
   function mostrarHistorico(){
     let historico = [];
     try{ historico = JSON.parse(localStorage.getItem('historicoAlmocoManual') || '[]'); }catch(_){ historico = []; }
@@ -2325,6 +2520,9 @@
                 ? 'Folga prevista na jornada semanal.'
                 : 'Folga marcada para este dia.') +
             '</div>' +
+          '</div>' +
+          '<div class="history-record-actions">' +
+            '<button class="history-day-delete" onclick="deleteHistoryDay(\'' + registro.data + '\')">Excluir este dia</button>' +
           '</div>';
         lista.appendChild(item);
         return;
@@ -2342,10 +2540,10 @@
           '</div>' +
         '</div>' +
         '<div class="history-timeline">' +
-          '<div class="history-step entry"><div class="history-point"></div><div class="history-step-label">Entrada</div><div class="history-step-time">' + safeTime(registro.entrada) + '</div></div>' +
-          '<div class="history-step lunch"><div class="history-point"></div><div class="history-step-label">Saída almoço</div><div class="history-step-time">' + safeTime(registro.saidaAlmoco) + '</div></div>' +
-          '<div class="history-step return"><div class="history-point"></div><div class="history-step-label">Retorno</div><div class="history-step-time">' + safeTime(registro.retorno) + '</div></div>' +
-          '<div class="history-step exit"><div class="history-point"></div><div class="history-step-label">Saída</div><div class="history-step-time">' + safeTime(registro.saidaFinal) + '</div></div>' +
+          '<div class="history-step entry"><div class="history-point"></div><div class="history-step-label">Entrada</div><div class="history-step-time">' + historyEditableTime(registro.data,'entrada',registro.entrada) + '</div></div>' +
+          '<div class="history-step lunch"><div class="history-point"></div><div class="history-step-label">Saída almoço</div><div class="history-step-time">' + historyEditableTime(registro.data,'saidaAlmoco',registro.saidaAlmoco) + '</div></div>' +
+          '<div class="history-step return"><div class="history-point"></div><div class="history-step-label">Retorno</div><div class="history-step-time">' + historyEditableTime(registro.data,'retorno',registro.retorno) + '</div></div>' +
+          '<div class="history-step exit"><div class="history-point"></div><div class="history-step-label">Saída</div><div class="history-step-time">' + historyEditableTime(registro.data,'saidaFinal',registro.saidaFinal) + '</div></div>' +
         '</div>' +
         '<div class="history-card-foot">' +
           '<div class="history-foot-metric">' +
@@ -2369,7 +2567,11 @@
           }
           return '<div class="history-balance delay"><span>Atraso</span><strong>-' + formatMinutesCompact(Math.abs(balance)) + '</strong></div>';
         })() +
-        '<div class="history-note">Cálculo informativo do app, com tolerância de 5 min na entrada e na saída. O fechamento oficial pode seguir regras da empresa.</div>';
+        '<div class="history-note">Cálculo informativo do app, com tolerância de 5 min na entrada e na saída. O fechamento oficial pode seguir regras da empresa.</div>' +
+        '<div class="history-edit-help">Toque no ✎ ao lado de um horário para corrigir somente aquela marcação.</div>' +
+        '<div class="history-record-actions">' +
+          '<button class="history-day-delete" onclick="deleteHistoryDay(\'' + registro.data + '\')">Excluir este dia</button>' +
+        '</div>';
       lista.appendChild(item);
     });
   }
