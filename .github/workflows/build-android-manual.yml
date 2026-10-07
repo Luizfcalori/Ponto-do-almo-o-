@@ -99,13 +99,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="manual-v${{ steps.version.outputs.name }}"
-          NOTES="Versão manual com jornada configurável e seletores de horário para entrada, saída e almoço."
+          NOTES="Retorno do almoço sempre manual, com horário sugerido, e quatro campos diretos para registrar entrada, almoço, retorno e saída."
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" Hora-do-Almoco-Manual.apk Hora-do-Almoco-Manual.apk.sha256 --clobber
             gh release edit "$TAG" --title "Hora do Almoço Manual ${{ steps.version.outputs.name }}" --notes "$NOTES"
           else
             gh release create "$TAG" Hora-do-Almoco-Manual.apk Hora-do-Almoco-Manual.apk.sha256 \
               --target "$GITHUB_SHA" \
-              --title "Hora do Almoço Manual 1.0.0" \
+              --title "Hora do Almoço Manual ${{ steps.version.outputs.name }}" \
               --notes "$NOTES"
           fi
