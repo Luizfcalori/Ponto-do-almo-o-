@@ -2,5 +2,5 @@
   "versionName": "2.2.2",
   "versionCode": 16,
   "apkUrl": "https://github.com/Luizfcalori/Ponto-do-almo-o-/releases/download/v2.2.2/Controle-de-Ponto-Senior.apk",
-  "notes": "Corrige o download de atualizações no Controle de Ponto e adiciona uma rota automática pelo navegador quando o atualizador interno falhar."
+  "notes": "Corrige o download de atualizações e adiciona rota direta pelo navegador."
 }
