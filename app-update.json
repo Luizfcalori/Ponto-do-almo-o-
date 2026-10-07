@@ -2,5 +2,5 @@
   "versionName": "2.2.1",
   "versionCode": 15,
   "apkUrl": "https://github.com/Luizfcalori/Ponto-do-almo-o-/releases/download/v2.2.1/Controle-de-Ponto-Senior.apk",
-  "notes": "Corrige o retorno do almoço: a previsão continua visível, mas o campo Retorno e o histórico só recebem a 3ª marcação real da Senior."
+  "notes": "Corrige o retorno do almoço: previsão não vira marcação; o retorno real vem da Senior."
 }
