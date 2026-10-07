@@ -1799,18 +1799,41 @@
     }
   }
 
+  function openAppUpdateDirect(){
+    if(!latestAppUpdate || !latestAppUpdate.apkUrl){
+      checkAppUpdate(true);
+      return;
+    }
+
+    if(window.AndroidManual && typeof window.AndroidManual.openUpdateLink === 'function'){
+      window.AndroidManual.openUpdateLink(latestAppUpdate.apkUrl);
+      return;
+    }
+
+    // APKs antigos já encaminham links externos do WebView para o navegador.
+    window.location.href = latestAppUpdate.apkUrl;
+  }
+
   function startAppUpdate(){
     if(!latestAppUpdate || !latestAppUpdate.apkUrl){
       checkAppUpdate(true);
       return;
     }
 
+    const btn = document.getElementById('appUpdateBtn');
+    const sub = document.getElementById('appUpdateSub');
+    if(btn){
+      btn.disabled = true;
+      btn.textContent = 'Iniciando atualização...';
+    }
+    if(sub) sub.textContent = 'Preparando o download da nova versão...';
+
     if(window.AndroidManual && typeof window.AndroidManual.installUpdate === 'function'){
       window.AndroidManual.installUpdate(latestAppUpdate.apkUrl);
       return;
     }
 
-    showToast('Atualização automática disponível apenas no aplicativo Android.');
+    openAppUpdateDirect();
   }
 
   window.receiveAppUpdaterStatus = function(raw){
@@ -1831,10 +1854,15 @@
       } else if(data.state === 'installer' && btn){
         btn.disabled = false;
         btn.textContent = 'Confirmar no Android';
+      } else if(data.state === 'browser_fallback' && btn){
+        btn.disabled = false;
+        btn.textContent = 'Abrir download novamente';
+        btn.onclick = openAppUpdateDirect;
       } else if(data.state === 'error' && btn){
         btn.disabled = false;
-        btn.textContent = 'Tentar novamente';
-        btn.onclick = startAppUpdate;
+        btn.textContent = 'Baixar atualização direto';
+        btn.onclick = openAppUpdateDirect;
+        if(sub) sub.textContent = (data.message || 'O atualizador interno falhou.') + ' Use o download direto.';
       }
 
       if(data.message) showToast(data.message);
