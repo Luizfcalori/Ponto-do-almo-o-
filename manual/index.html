@@ -587,6 +587,33 @@
       width:100%;margin-top:8px;border:1px solid #dbe4ec;background:#fff;color:#0f172a;
       border-radius:12px;padding:9px 10px;font-size:9.8px;font-weight:850
     }
+    .manual-marks-title{margin-top:11px;font-size:10px;font-weight:900;color:#334155}
+    .manual-marks-grid{display:grid;gap:7px;margin-top:7px}
+    .manual-mark-row{
+      display:flex;align-items:center;justify-content:space-between;gap:8px;
+      background:#f8fafc;border:1px solid #e8eef4;border-radius:13px;padding:8px 9px
+    }
+    .manual-mark-info{display:flex;align-items:center;gap:7px;min-width:0;flex:1}
+    .manual-mark-info b{display:block;font-size:9.8px;color:#0f172a}
+    .manual-mark-info small{display:block;font-size:7.7px;color:#7b8a9b;margin-top:1px;line-height:1.25}
+    .manual-mark-dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto}
+    .manual-mark-dot.entry{background:#16c784}
+    .manual-mark-dot.lunch{background:#ff8a1f}
+    .manual-mark-dot.return{background:#3b82f6}
+    .manual-mark-dot.exit{background:#ef6461}
+    .manual-mark-actions{display:flex;align-items:center;gap:5px;flex:0 0 auto}
+    .manual-mark-actions input{
+      width:78px;border:1px solid #d7e0e9;background:#fff;color:#0f172a;
+      border-radius:10px;padding:7px 5px;font-size:12px;font-weight:850
+    }
+    .manual-mark-actions button{
+      border:0;border-radius:9px;background:#0f172a;color:#fff;padding:7px 7px;
+      font-size:8.4px;font-weight:850
+    }
+    .manual-mark-note{
+      margin-top:8px;padding:8px 9px;border-radius:11px;background:#eef7ff;color:#41617c;
+      font-size:8.2px;line-height:1.35
+    }
     .schedule-modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     .schedule-field{margin-top:13px}
     .schedule-field.full{grid-column:1/-1}
@@ -694,8 +721,60 @@
           <span>Almoço <b id="manualScheduleBreakView">Definir</b></span>
         </div>
         <button class="manual-schedule-btn" onclick="openManualScheduleModal()">Definir horários da jornada</button>
-        <button class="manual-punch-btn" id="manualPunchBtn" onclick="manualPunch()">Registrar entrada</button>
-        <button class="manual-edit-btn" onclick="editManualClockings()">Corrigir marcações</button>
+
+        <div class="manual-marks-title">Marcações de hoje</div>
+        <div class="manual-marks-grid">
+          <div class="manual-mark-row">
+            <div class="manual-mark-info">
+              <span class="manual-mark-dot entry"></span>
+              <div><b>Entrada</b><small>Horário real de entrada</small></div>
+            </div>
+            <div class="manual-mark-actions">
+              <input type="time" id="manualMark0" onchange="setManualMark(0,this.value)">
+              <button onclick="setManualMarkNow(0)">Agora</button>
+            </div>
+          </div>
+
+          <div class="manual-mark-row">
+            <div class="manual-mark-info">
+              <span class="manual-mark-dot lunch"></span>
+              <div><b>Saída para almoço</b><small>Quando você realmente sair</small></div>
+            </div>
+            <div class="manual-mark-actions">
+              <input type="time" id="manualMark1" onchange="setManualMark(1,this.value)">
+              <button onclick="setManualMarkNow(1)">Agora</button>
+            </div>
+          </div>
+
+          <div class="manual-mark-row">
+            <div class="manual-mark-info">
+              <span class="manual-mark-dot return"></span>
+              <div>
+                <b>Retorno do almoço</b>
+                <small id="manualReturnSuggestion">Sugestão: --:-- • você confirma o horário real</small>
+              </div>
+            </div>
+            <div class="manual-mark-actions">
+              <input type="time" id="manualMark2" onchange="setManualMark(2,this.value)">
+              <button onclick="setManualMarkNow(2)">Agora</button>
+            </div>
+          </div>
+
+          <div class="manual-mark-row">
+            <div class="manual-mark-info">
+              <span class="manual-mark-dot exit"></span>
+              <div><b>Saída</b><small>Horário real de encerramento</small></div>
+            </div>
+            <div class="manual-mark-actions">
+              <input type="time" id="manualMark3" onchange="setManualMark(3,this.value)">
+              <button onclick="setManualMarkNow(3)">Agora</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="manual-mark-note">
+          O retorno sugerido é apenas uma referência. Ele só vira marcação quando você informar ou tocar em “Agora”.
+        </div>
       </div>
     </div>
   </section>
@@ -725,7 +804,7 @@
       </div>
 
       <div class="return-card">
-        <div class="small">Retorno previsto</div>
+        <div class="small">Retorno sugerido</div>
         <div class="big" id="returnTime">--:--</div>
       </div>
 
@@ -758,7 +837,7 @@
         </div>
       </div>
 
-      <button class="btn btn-primary" onclick="adicionarAlarme()">⏰ Definir alarme de retorno</button>
+      <button class="btn btn-primary" onclick="adicionarAlarme()">⏰ Lembrar no horário sugerido</button>
       <button class="btn btn-outline" onclick="goView('home')">Voltar ao início</button>
     </div>
   </section>
@@ -1218,15 +1297,15 @@
       timing.remainingMs > 0 ? 'Tempo de almoço' : 'Intervalo concluído';
     document.getElementById('clockMeta').innerHTML =
       '<div class="clock-detail-row"><span class="clock-detail-icon">◷</span><span>Início ' + saida + '</span></div>' +
-      '<div class="clock-detail-row accent"><span class="clock-detail-icon">↩</span><span>Retorno previsto ' + retorno + '</span></div>';
+      '<div class="clock-detail-row accent"><span class="clock-detail-icon">↩</span><span>Retorno sugerido ' + retorno + '</span></div>';
     document.getElementById('clockFooter').textContent =
       timing.remainingMs > 0
         ? timing.remainMin + (timing.remainMin === 1 ? ' min restante' : ' min restantes')
         : 'Hora de retornar';
 
-    document.getElementById('mainActionTitle').textContent = 'Retorno previsto do almoço';
+    document.getElementById('mainActionTitle').textContent = 'Retorno sugerido do almoço';
     document.getElementById('mainActionSub').textContent =
-      'Previsto para ' + retorno + ' • saída ' + saida;
+      'Sugestão ' + retorno + ' • registre manualmente quando voltar';
     document.querySelector('.main-action').onclick = function(){ goView('lunch'); };
   }
 
@@ -2572,46 +2651,59 @@
   }
 
   function registerSeniorLunch(saida){
-    const retorno = calcReturnFromTime(saida);
-    if(!retorno) return;
+    const retornoSugerido = calcReturnFromTime(saida);
+    if(!saida) return;
 
     const current = JSON.parse(localStorage.getItem('almocoAtivoManual') || 'null');
-    const today = new Date().toLocaleDateString('pt-BR');
-
-    if(current && current.saida === saida){
+    if(current && current.saida === saida && current.retorno === retornoSugerido){
+      updateManualReturnSuggestion();
       return;
     }
 
     localStorage.setItem('almocoAtivoManual',JSON.stringify({
       saida:saida,
-      retorno:retorno,
+      retorno:retornoSugerido || null,
       data:new Date().toISOString(),
-      origem:'Senior'
+      origem:'Manual'
     }));
 
-    document.getElementById('exitTime').value = saida;
-    document.getElementById('lunchOutBig').textContent = saida;
-    document.getElementById('returnTime').textContent = retorno;
-    document.getElementById('progressStart').textContent = saida;
-    document.getElementById('progressEnd').textContent = retorno;
-    document.getElementById('progressCard').style.display = 'block';
-    document.getElementById('lunchHeroTitle').textContent = 'Almoço detectado pela Senior!';
-    document.getElementById('lunchHeroText').textContent =
-      'Sua saída foi reconhecida automaticamente e o retorno foi calculado com ' +
-      formatIntervalDuration(getLunchIntervalMinutes()) + ' de intervalo.';
+    const exitInput = document.getElementById('exitTime');
+    if(exitInput) exitInput.value = saida;
+    const lunchOutBig = document.getElementById('lunchOutBig');
+    if(lunchOutBig) lunchOutBig.textContent = saida;
+    const returnTime = document.getElementById('returnTime');
+    if(returnTime) returnTime.textContent = retornoSugerido || '--:--';
+
+    const progressStart = document.getElementById('progressStart');
+    const progressEnd = document.getElementById('progressEnd');
+    const progressCard = document.getElementById('progressCard');
+    if(progressStart) progressStart.textContent = saida;
+    if(progressEnd) progressEnd.textContent = retornoSugerido || '--:--';
+    if(progressCard) progressCard.style.display = retornoSugerido ? 'block' : 'none';
+
+    document.getElementById('lunchHeroTitle').textContent = 'Almoço iniciado';
+    document.getElementById('lunchHeroText').textContent = retornoSugerido
+      ? 'Retorno sugerido às ' + retornoSugerido + '. Você ainda precisa registrar o retorno real.'
+      : 'Registre manualmente o retorno quando voltar do almoço.';
+
     document.getElementById('sumLunchOut').textContent = saida;
-    document.getElementById('sumReturn').textContent = retorno;
-    renderLunchClock(saida,retorno);
+    document.getElementById('sumReturn').textContent = '--:--';
 
-    const rp = retorno.split(':').map(Number);
-    ultimoRetornoHora = rp[0];
-    ultimoRetornoMinuto = rp[1];
+    if(retornoSugerido){
+      renderLunchClock(saida,retornoSugerido);
+      const rp = retornoSugerido.split(':').map(Number);
+      ultimoRetornoHora = rp[0];
+      ultimoRetornoMinuto = rp[1];
+      if(notifyEnabled) scheduleReturnNotification(retornoSugerido);
+    }
 
-    salvarHistorico(saida,retorno);
+    updateManualReturnSuggestion();
     atualizarProgresso();
-    if(notifyEnabled) scheduleReturnNotification(retorno);
-
-    showToast('Senior detectou sua saída às ' + saida + '. Retorno: ' + retorno + '.');
+    showToast(
+      retornoSugerido
+        ? 'Almoço registrado. Retorno sugerido: ' + retornoSugerido + '.'
+        : 'Almoço registrado. Informe o retorno quando voltar.'
+    );
   }
 
   function minutesFromTime(value){
@@ -2754,8 +2846,6 @@
 
     if(lunchReturn){
       document.getElementById('sumReturn').textContent = lunchReturn;
-    } else if(lunchOut){
-      document.getElementById('sumReturn').textContent = calcReturnFromTime(lunchOut) || '--:--';
     } else {
       document.getElementById('sumReturn').textContent = '--:--';
     }
@@ -2956,31 +3046,112 @@
   function loadManualTimes(){ try{ const d=JSON.parse(localStorage.getItem(manualStateKey())||'[]'); return Array.isArray(d)?d.filter(Boolean).slice(0,4):[]; }catch(_){ return []; } }
   function saveManualTimes(times){ localStorage.setItem(manualStateKey(),JSON.stringify((times||[]).slice(0,4))); }
   function manualEvents(times){ return (times||[]).map(function(time){ return {time:time,day:manualToday()}; }); }
-  function updateManualClockUI(){
-    const times=loadManualTimes(),btn=document.getElementById('manualPunchBtn'),sub=document.getElementById('manualClockSub'),badge=document.getElementById('manualClockBadge');
-    const labels=['Registrar entrada','Registrar saída para almoço','Registrar retorno do almoço','Registrar saída'];
-    if(badge) badge.textContent=times.length+'/4';
-    if(btn){ if(times.length>=4){btn.textContent='Jornada concluída';btn.classList.add('done');btn.disabled=true;} else {btn.textContent=labels[times.length];btn.classList.remove('done');btn.disabled=false;} }
-    if(sub) sub.textContent=times.length?'Última marcação: '+times[times.length-1]+' • próxima marcação manual abaixo.':'Registre sua jornada diretamente pelo aplicativo.';
+  function updateManualReturnSuggestion(){
+    const times = loadManualTimes();
+    const out = times[1] || null;
+    const actualReturn = times[2] || null;
+    const suggested = out ? calcReturnFromTime(out) : null;
+    const el = document.getElementById('manualReturnSuggestion');
+
+    if(el){
+      if(actualReturn){
+        el.textContent = 'Retorno registrado: ' + actualReturn;
+      } else if(suggested){
+        el.textContent = 'Sugestão: ' + suggested + ' • você confirma o horário real';
+      } else {
+        el.textContent = 'Sugestão: --:-- • você confirma o horário real';
+      }
+    }
   }
-  function manualPunch(){
-    const times=loadManualTimes(); if(times.length>=4)return;
-    const schedule=getExpectedSchedule();
-    if(!schedule.start || !schedule.end || getLunchIntervalMinutes() <= 0){
-      openManualScheduleModal();
-      showToast('Defina sua jornada antes da primeira marcação.');
+
+  function updateManualClockUI(){
+    const times = loadManualTimes();
+    const sub = document.getElementById('manualClockSub');
+    const badge = document.getElementById('manualClockBadge');
+
+    if(badge) badge.textContent = times.length + '/4';
+
+    for(let i=0;i<4;i++){
+      const input = document.getElementById('manualMark'+i);
+      if(input) input.value = times[i] || '';
+    }
+
+    if(sub){
+      sub.textContent = times.length >= 4
+        ? 'Jornada de hoje concluída. Você ainda pode corrigir qualquer horário abaixo.'
+        : 'Preencha os horários reais ou toque em “Agora” no momento de cada marcação.';
+    }
+
+    updateManualReturnSuggestion();
+  }
+
+  function validateManualSequence(times){
+    const mins = times.map(minutesFromTime);
+    for(let i=1;i<mins.length;i++){
+      if(mins[i] !== null && mins[i-1] !== null && mins[i] < mins[i-1]){
+        return false;
+      }
+    }
+    return true;
+  }
+
+  function setManualMark(index,value){
+    if(index < 0 || index > 3) return;
+    if(value && !/^([01]\d|2[0-3]):[0-5]\d$/.test(value)){
+      showToast('Use um horário válido.');
+      updateManualClockUI();
       return;
     }
-    const now=new Date(),value=pad(now.getHours())+':'+pad(now.getMinutes()),names=['entrada','saída para almoço','retorno do almoço','saída'];
-    if(!confirm('Registrar '+names[times.length]+' às '+value+'?'))return;
-    times.push(value); saveManualTimes(times); applySeniorEvents(manualEvents(times)); updateManualClockUI(); showToast('Marcação registrada às '+value+'.');
+
+    const times = loadManualTimes();
+    while(times.length < 4) times.push(null);
+    times[index] = value || null;
+
+    // Não permite preencher uma etapa pulando a anterior.
+    for(let i=0;i<index;i++){
+      if(!times[i]){
+        showToast('Preencha primeiro a marcação anterior.');
+        updateManualClockUI();
+        return;
+      }
+    }
+
+    const compact = times.filter(function(v,i){
+      if(i === 0) return !!v;
+      return !!v && times.slice(0,i).every(Boolean);
+    });
+
+    if(!validateManualSequence(compact)){
+      showToast('Confira a ordem dos horários.');
+      updateManualClockUI();
+      return;
+    }
+
+    saveManualTimes(compact);
+    applySeniorEvents(manualEvents(compact));
+    updateManualClockUI();
+
+    const labels = ['Entrada','Saída para almoço','Retorno do almoço','Saída'];
+    showToast(labels[index] + (value ? ' registrada às ' + value + '.' : ' removida.'));
   }
+
+  function setManualMarkNow(index){
+    const now = new Date();
+    const value = pad(now.getHours()) + ':' + pad(now.getMinutes());
+    setManualMark(index,value);
+  }
+
+  function manualPunch(){
+    const times = loadManualTimes();
+    const index = Math.min(times.length,3);
+    setManualMarkNow(index);
+  }
+
   function editManualClockings(){
-    const raw=prompt('Informe até 4 horários separados por vírgula:\nEntrada, Saída almoço, Retorno, Saída',loadManualTimes().join(', ')); if(raw===null)return;
-    const values=raw.split(',').map(function(v){return v.trim();}).filter(Boolean).slice(0,4);
-    if(!values.every(function(v){return /^([01]\d|2[0-3]):[0-5]\d$/.test(v);})){alert('Use horários no formato HH:MM separados por vírgula.');return;}
-    saveManualTimes(values); applySeniorEvents(manualEvents(values)); updateManualClockUI(); showToast('Horários manuais atualizados.');
+    updateManualClockUI();
+    showToast('Edite diretamente os quatro horários na tela inicial.');
   }
+
   function openManualScheduleModal(){
     const modal = document.getElementById('manualScheduleModal');
     const schedule = getExpectedSchedule();
