@@ -1,6 +1,6 @@
 {
-  "versionName": "2.2.3",
-  "versionCode": 17,
-  "apkUrl": "https://github.com/Luizfcalori/Ponto-do-almo-o-/releases/download/v2.2.3/Controle-de-Ponto-Senior.apk",
-  "notes": "Cria alarmes reais do sistema para o retorno do almoço e melhora integração com smartwatch pareado."
+  "versionName": "2.2.4",
+  "versionCode": 18,
+  "apkUrl": "https://github.com/Luizfcalori/Ponto-do-almo-o-/releases/download/v2.2.4/Controle-de-Ponto-Senior.apk",
+  "notes": "Os alarmes de retorno agora usam identificadores próprios e são limpos automaticamente depois de tocar ou quando a Senior registra o retorno real."
 }
