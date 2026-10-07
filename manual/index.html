@@ -576,7 +576,7 @@
     .manual-punch-btn.done{background:#eafaf3;color:#087653;box-shadow:none}
     .manual-edit-btn{width:100%;border:0;background:transparent;color:#64748b;padding:8px 4px 2px;font-size:9.5px;font-weight:800}
     .manual-schedule-summary{
-      display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px
+      display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-top:10px
     }
     .manual-schedule-summary span{
       background:#f7fafc;border:1px solid #e8eef4;border-radius:11px;padding:7px 4px;
@@ -623,6 +623,23 @@
       padding:12px 10px;font-size:16px;color:#0f172a;outline:none
     }
     .schedule-help{margin-top:10px;font-size:9px;line-height:1.45;color:#7b8a9b}
+    .weekly-tools{display:flex;gap:7px;flex-wrap:wrap;margin:12px 0 9px}
+    .weekly-tool-btn{
+      border:1px solid #dbe4ec;background:#fff;color:#334155;border-radius:10px;
+      padding:8px 9px;font-size:8.7px;font-weight:850
+    }
+    .weekly-schedule-list{max-height:min(56vh,520px);overflow:auto;display:grid;gap:9px;padding-right:2px}
+    .weekly-day-card{background:#f8fafc;border:1px solid #e5ecf2;border-radius:15px;padding:10px}
+    .weekly-day-card.weekly-today{border-color:#94ddc2;box-shadow:0 0 0 1px rgba(22,199,132,.10)}
+    .weekly-day-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}
+    .weekly-day-name{font-size:11px;font-weight:950;color:#0f172a}
+    .weekly-day-off{border:0;background:transparent;color:#64748b;font-size:8.5px;font-weight:850;padding:4px}
+    .weekly-day-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+    .weekly-time-field label{display:block;font-size:7.7px;color:#7b8a9b;font-weight:800;margin-bottom:4px}
+    .weekly-time-field input{
+      width:100%;border:1px solid #d7e0e9;background:#fff;color:#0f172a;
+      border-radius:10px;padding:8px 6px;font-size:13px;font-weight:850
+    }
   </style>
 </head>
 <body>
@@ -717,8 +734,9 @@
         </div>
         <div class="manual-schedule-summary" id="manualScheduleSummary">
           <span>Entrada <b id="manualScheduleStartView">--:--</b></span>
+          <span>Almoço <b id="manualScheduleLunchOutView">--:--</b></span>
+          <span>Retorno <b id="manualScheduleReturnView">--:--</b></span>
           <span>Saída <b id="manualScheduleEndView">--:--</b></span>
-          <span>Almoço <b id="manualScheduleBreakView">Definir</b></span>
         </div>
         <button class="manual-schedule-btn" onclick="openManualScheduleModal()">Definir horários da jornada</button>
 
@@ -1055,8 +1073,8 @@
     <div class="modal-card" onclick="event.stopPropagation()">
       <div class="modal-head">
         <div>
-          <div class="modal-title">Sua jornada</div>
-          <div class="modal-sub">Escolha os horários usando o seletor do celular. Nenhum horário vem fixo.</div>
+          <div class="modal-title">Jornada semanal</div>
+          <div class="modal-sub">Configure de segunda a domingo. Cada dia pode ter horários diferentes.</div>
         </div>
         <button class="modal-close" onclick="closeManualScheduleModal()">✕</button>
       </div>
@@ -1066,26 +1084,103 @@
         <input id="manualNameInput" type="text" placeholder="Ex.: Luiz">
       </div>
 
-      <div class="schedule-modal-grid">
-        <div class="schedule-field">
-          <label for="manualStartInput">Entrada prevista</label>
-          <input id="manualStartInput" type="time">
+      <div class="weekly-tools">
+        <button class="weekly-tool-btn" onclick="copyMondayToWeekdays()">Copiar segunda → terça a sexta</button>
+        <button class="weekly-tool-btn" onclick="copyMondayToAll()">Copiar segunda → semana toda</button>
+      </div>
+
+      <div class="weekly-schedule-list">
+        <div class="weekly-day-card" id="weekly-card-mon">
+          <div class="weekly-day-head">
+            <div class="weekly-day-name">Segunda-feira</div>
+            <button class="weekly-day-off" onclick="clearWeeklyDay('mon')">Folga / limpar</button>
+          </div>
+          <div class="weekly-day-grid">
+            <div class="weekly-time-field"><label>Entrada</label><input type="time" id="wk-mon-start"></div>
+            <div class="weekly-time-field"><label>Saída para almoço</label><input type="time" id="wk-mon-lunchOut"></div>
+            <div class="weekly-time-field"><label>Retorno do almoço</label><input type="time" id="wk-mon-lunchReturn"></div>
+            <div class="weekly-time-field"><label>Saída</label><input type="time" id="wk-mon-end"></div>
+          </div>
         </div>
-        <div class="schedule-field">
-          <label for="manualEndInput">Saída prevista</label>
-          <input id="manualEndInput" type="time">
+        <div class="weekly-day-card" id="weekly-card-tue">
+          <div class="weekly-day-head">
+            <div class="weekly-day-name">Terça-feira</div>
+            <button class="weekly-day-off" onclick="clearWeeklyDay('tue')">Folga / limpar</button>
+          </div>
+          <div class="weekly-day-grid">
+            <div class="weekly-time-field"><label>Entrada</label><input type="time" id="wk-tue-start"></div>
+            <div class="weekly-time-field"><label>Saída para almoço</label><input type="time" id="wk-tue-lunchOut"></div>
+            <div class="weekly-time-field"><label>Retorno do almoço</label><input type="time" id="wk-tue-lunchReturn"></div>
+            <div class="weekly-time-field"><label>Saída</label><input type="time" id="wk-tue-end"></div>
+          </div>
         </div>
-        <div class="schedule-field full">
-          <label for="manualBreakInput">Tempo de almoço</label>
-          <input id="manualBreakInput" type="time" step="60">
+        <div class="weekly-day-card" id="weekly-card-wed">
+          <div class="weekly-day-head">
+            <div class="weekly-day-name">Quarta-feira</div>
+            <button class="weekly-day-off" onclick="clearWeeklyDay('wed')">Folga / limpar</button>
+          </div>
+          <div class="weekly-day-grid">
+            <div class="weekly-time-field"><label>Entrada</label><input type="time" id="wk-wed-start"></div>
+            <div class="weekly-time-field"><label>Saída para almoço</label><input type="time" id="wk-wed-lunchOut"></div>
+            <div class="weekly-time-field"><label>Retorno do almoço</label><input type="time" id="wk-wed-lunchReturn"></div>
+            <div class="weekly-time-field"><label>Saída</label><input type="time" id="wk-wed-end"></div>
+          </div>
+        </div>
+        <div class="weekly-day-card" id="weekly-card-thu">
+          <div class="weekly-day-head">
+            <div class="weekly-day-name">Quinta-feira</div>
+            <button class="weekly-day-off" onclick="clearWeeklyDay('thu')">Folga / limpar</button>
+          </div>
+          <div class="weekly-day-grid">
+            <div class="weekly-time-field"><label>Entrada</label><input type="time" id="wk-thu-start"></div>
+            <div class="weekly-time-field"><label>Saída para almoço</label><input type="time" id="wk-thu-lunchOut"></div>
+            <div class="weekly-time-field"><label>Retorno do almoço</label><input type="time" id="wk-thu-lunchReturn"></div>
+            <div class="weekly-time-field"><label>Saída</label><input type="time" id="wk-thu-end"></div>
+          </div>
+        </div>
+        <div class="weekly-day-card" id="weekly-card-fri">
+          <div class="weekly-day-head">
+            <div class="weekly-day-name">Sexta-feira</div>
+            <button class="weekly-day-off" onclick="clearWeeklyDay('fri')">Folga / limpar</button>
+          </div>
+          <div class="weekly-day-grid">
+            <div class="weekly-time-field"><label>Entrada</label><input type="time" id="wk-fri-start"></div>
+            <div class="weekly-time-field"><label>Saída para almoço</label><input type="time" id="wk-fri-lunchOut"></div>
+            <div class="weekly-time-field"><label>Retorno do almoço</label><input type="time" id="wk-fri-lunchReturn"></div>
+            <div class="weekly-time-field"><label>Saída</label><input type="time" id="wk-fri-end"></div>
+          </div>
+        </div>
+        <div class="weekly-day-card" id="weekly-card-sat">
+          <div class="weekly-day-head">
+            <div class="weekly-day-name">Sábado</div>
+            <button class="weekly-day-off" onclick="clearWeeklyDay('sat')">Folga / limpar</button>
+          </div>
+          <div class="weekly-day-grid">
+            <div class="weekly-time-field"><label>Entrada</label><input type="time" id="wk-sat-start"></div>
+            <div class="weekly-time-field"><label>Saída para almoço</label><input type="time" id="wk-sat-lunchOut"></div>
+            <div class="weekly-time-field"><label>Retorno do almoço</label><input type="time" id="wk-sat-lunchReturn"></div>
+            <div class="weekly-time-field"><label>Saída</label><input type="time" id="wk-sat-end"></div>
+          </div>
+        </div>
+        <div class="weekly-day-card" id="weekly-card-sun">
+          <div class="weekly-day-head">
+            <div class="weekly-day-name">Domingo</div>
+            <button class="weekly-day-off" onclick="clearWeeklyDay('sun')">Folga / limpar</button>
+          </div>
+          <div class="weekly-day-grid">
+            <div class="weekly-time-field"><label>Entrada</label><input type="time" id="wk-sun-start"></div>
+            <div class="weekly-time-field"><label>Saída para almoço</label><input type="time" id="wk-sun-lunchOut"></div>
+            <div class="weekly-time-field"><label>Retorno do almoço</label><input type="time" id="wk-sun-lunchReturn"></div>
+            <div class="weekly-time-field"><label>Saída</label><input type="time" id="wk-sun-end"></div>
+          </div>
         </div>
       </div>
 
       <div class="schedule-help">
-        Você pode alterar estes horários quando quiser. O app usa esse período apenas para calcular jornada, atraso e hora extra.
+        Preencha Entrada, Saída para almoço, Retorno e Saída em cada dia trabalhado. Deixe os quatro campos vazios nos dias de folga. O retorno é só previsto; a marcação real continua sempre manual.
       </div>
 
-      <button class="btn btn-orange" onclick="saveManualSchedule()">Salvar jornada</button>
+      <button class="btn btn-orange" onclick="saveManualSchedule()">Salvar semana</button>
     </div>
   </div>
 
@@ -1153,14 +1248,51 @@
 
   function pad(n){ return String(n).padStart(2,'0'); }
 
-  function getLunchIntervalMinutes(){
+  const WEEK_DAY_KEYS = ['sun','mon','tue','wed','thu','fri','sat'];
+  const WEEK_DAY_LABELS = {
+    sun:'Domingo',mon:'Segunda-feira',tue:'Terça-feira',wed:'Quarta-feira',
+    thu:'Quinta-feira',fri:'Sexta-feira',sat:'Sábado'
+  };
+
+  function scheduleDate(value){
+    if(value instanceof Date) return value;
+    const text = String(value || '');
+    const m = text.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if(m) return new Date(Number(m[3]),Number(m[2])-1,Number(m[1]),12,0,0,0);
+    return new Date();
+  }
+
+  function weekKeyForDate(value){
+    return WEEK_DAY_KEYS[scheduleDate(value).getDay()];
+  }
+
+  function loadWeeklySchedule(){
+    try{
+      const data = JSON.parse(localStorage.getItem('manualWeeklySchedule') || '{}');
+      return data && typeof data === 'object' ? data : {};
+    }catch(_){ return {}; }
+  }
+
+  function scheduleBreakMinutes(schedule){
+    if(!schedule) return 0;
+    const out = minutesFromTime(schedule.lunchOut);
+    const back = minutesFromTime(schedule.lunchReturn);
+    if(out === null || back === null) return 0;
+    let diff = back-out;
+    if(diff < 0) diff += 24*60;
+    return diff;
+  }
+
+  function getLunchIntervalMinutes(dateValue){
+    const schedule = getExpectedSchedule(dateValue);
+    const weeklyMinutes = scheduleBreakMinutes(schedule);
+    if(weeklyMinutes > 0) return weeklyMinutes;
+
     const raw = localStorage.getItem('manualScheduleBreak');
     if(raw){
       const match = String(raw).trim().match(/^(\d{1,2}):([0-5]\d)$/);
       if(match){
-        const hours = Number(match[1]);
-        const minutes = Number(match[2]);
-        const total = hours * 60 + minutes;
+        const total = Number(match[1])*60 + Number(match[2]);
         if(total > 0) return total;
       }
     }
@@ -2624,6 +2756,7 @@
       localStorage.removeItem('manualScheduleStart');
       localStorage.removeItem('manualScheduleEnd');
       localStorage.removeItem('manualScheduleBreak');
+      localStorage.removeItem('manualWeeklySchedule');
       const greet = document.getElementById('greetMain');
       if(greet) greet.textContent = 'Olá!';
       seniorConnected = false;
@@ -2643,6 +2776,9 @@
   }
 
   function calcReturnFromTime(saida){
+    const schedule = getExpectedSchedule();
+    if(schedule && schedule.lunchReturn) return schedule.lunchReturn;
+
     const p = String(saida || '').split(':').map(Number);
     const lunchMinutes = getLunchIntervalMinutes();
     if(p.length < 2 || Number.isNaN(p[0]) || Number.isNaN(p[1]) || lunchMinutes <= 0) return null;
@@ -2718,10 +2854,28 @@
     return pad(Math.floor(total / 60)) + ':' + pad(total % 60);
   }
 
-  function getExpectedSchedule(){
+  function getExpectedSchedule(dateValue){
+    const key = weekKeyForDate(dateValue);
+    const weekly = loadWeeklySchedule();
+    const day = weekly[key];
+
+    if(day && (day.start || day.lunchOut || day.lunchReturn || day.end)){
+      return {
+        key:key,label:WEEK_DAY_LABELS[key],
+        start:day.start || null,
+        lunchOut:day.lunchOut || null,
+        lunchReturn:day.lunchReturn || null,
+        end:day.end || null,
+        weekly:true
+      };
+    }
+
     return {
+      key:key,label:WEEK_DAY_LABELS[key],
       start:localStorage.getItem('manualScheduleStart') || null,
-      end:localStorage.getItem('manualScheduleEnd') || null
+      lunchOut:null,lunchReturn:null,
+      end:localStorage.getItem('manualScheduleEnd') || null,
+      weekly:false
     };
   }
 
@@ -2735,14 +2889,13 @@
     const card = document.querySelector('.main-action');
     if(!card) return;
 
-    if(schedule.start && schedule.end){
-      document.getElementById('mainActionTitle').textContent = 'Período de trabalho';
+    if(schedule.start && schedule.lunchOut && schedule.lunchReturn && schedule.end){
+      document.getElementById('mainActionTitle').textContent = 'Jornada de ' + schedule.label.toLowerCase();
       document.getElementById('mainActionSub').textContent =
-        schedule.start + ' → ' + schedule.end + ' • almoço ' +
-        (getLunchIntervalMinutes() > 0 ? formatIntervalDuration(getLunchIntervalMinutes()) : 'não definido');
+        schedule.start + ' • almoço ' + schedule.lunchOut + '–' + schedule.lunchReturn + ' • saída ' + schedule.end;
     } else {
-      document.getElementById('mainActionTitle').textContent = 'Defina seu período de trabalho';
-      document.getElementById('mainActionSub').textContent = 'Escolha entrada, saída e tempo de almoço';
+      document.getElementById('mainActionTitle').textContent = 'Jornada de ' + schedule.label.toLowerCase() + ' não configurada';
+      document.getElementById('mainActionSub').textContent = 'Toque para preencher os horários deste dia';
     }
     card.onclick = openManualScheduleModal;
   }
@@ -3097,6 +3250,13 @@
 
   function setManualMark(index,value){
     if(index < 0 || index > 3) return;
+
+    const todaySchedule = getExpectedSchedule();
+    if(!todaySchedule.start || !todaySchedule.lunchOut || !todaySchedule.lunchReturn || !todaySchedule.end){
+      openManualScheduleModal();
+      showToast('Configure os 4 horários previstos de hoje antes da marcação.');
+      return;
+    }
     if(value && !/^([01]\d|2[0-3]):[0-5]\d$/.test(value)){
       showToast('Use um horário válido.');
       updateManualClockUI();
@@ -3152,18 +3312,51 @@
     showToast('Edite diretamente os quatro horários na tela inicial.');
   }
 
+  function weeklyInputId(key,field){ return 'wk-' + key + '-' + field; }
+
+  function readWeeklyDayFromForm(key){
+    return {
+      start:(document.getElementById(weeklyInputId(key,'start')).value || ''),
+      lunchOut:(document.getElementById(weeklyInputId(key,'lunchOut')).value || ''),
+      lunchReturn:(document.getElementById(weeklyInputId(key,'lunchReturn')).value || ''),
+      end:(document.getElementById(weeklyInputId(key,'end')).value || '')
+    };
+  }
+
+  function writeWeeklyDayToForm(key,day){
+    day = day || {};
+    ['start','lunchOut','lunchReturn','end'].forEach(function(field){
+      const el = document.getElementById(weeklyInputId(key,field));
+      if(el) el.value = day[field] || '';
+    });
+  }
+
+  function clearWeeklyDay(key){ writeWeeklyDayToForm(key,{}); }
+
+  function copyMondayToWeekdays(){
+    const monday = readWeeklyDayFromForm('mon');
+    ['tue','wed','thu','fri'].forEach(function(key){ writeWeeklyDayToForm(key,monday); });
+    showToast('Segunda copiada para terça a sexta.');
+  }
+
+  function copyMondayToAll(){
+    const monday = readWeeklyDayFromForm('mon');
+    ['tue','wed','thu','fri','sat','sun'].forEach(function(key){ writeWeeklyDayToForm(key,monday); });
+    showToast('Segunda copiada para a semana toda.');
+  }
+
   function openManualScheduleModal(){
     const modal = document.getElementById('manualScheduleModal');
-    const schedule = getExpectedSchedule();
     const name = document.getElementById('manualNameInput');
-    const start = document.getElementById('manualStartInput');
-    const end = document.getElementById('manualEndInput');
-    const lunch = document.getElementById('manualBreakInput');
-
+    const weekly = loadWeeklySchedule();
     if(name) name.value = localStorage.getItem('manualFirstName') || '';
-    if(start) start.value = schedule.start || '';
-    if(end) end.value = schedule.end || '';
-    if(lunch) lunch.value = localStorage.getItem('manualScheduleBreak') || '';
+
+    ['mon','tue','wed','thu','fri','sat','sun'].forEach(function(key){
+      writeWeeklyDayToForm(key,weekly[key] || {});
+      const card = document.getElementById('weekly-card-' + key);
+      if(card) card.classList.toggle('weekly-today',key === weekKeyForDate(new Date()));
+    });
+
     if(modal) modal.classList.add('show');
   }
 
@@ -3175,23 +3368,40 @@
 
   function updateManualScheduleSummary(){
     const schedule = getExpectedSchedule();
-    const lunch = getLunchIntervalMinutes();
     const startView = document.getElementById('manualScheduleStartView');
+    const lunchView = document.getElementById('manualScheduleLunchOutView');
+    const returnView = document.getElementById('manualScheduleReturnView');
     const endView = document.getElementById('manualScheduleEndView');
-    const breakView = document.getElementById('manualScheduleBreakView');
     if(startView) startView.textContent = schedule.start || '--:--';
+    if(lunchView) lunchView.textContent = schedule.lunchOut || '--:--';
+    if(returnView) returnView.textContent = schedule.lunchReturn || '--:--';
     if(endView) endView.textContent = schedule.end || '--:--';
-    if(breakView) breakView.textContent = lunch > 0 ? formatIntervalDuration(lunch) : 'Definir';
   }
 
   function saveManualSchedule(){
     const name = (document.getElementById('manualNameInput').value || '').trim();
-    const start = document.getElementById('manualStartInput').value || '';
-    const end = document.getElementById('manualEndInput').value || '';
-    const lunch = document.getElementById('manualBreakInput').value || '';
+    const weekly = {};
+    const keys = ['mon','tue','wed','thu','fri','sat','sun'];
+    let configuredDays = 0;
 
-    if(!start || !end || !lunch){
-      alert('Escolha a entrada, a saída e o tempo de almoço.');
+    for(let i=0;i<keys.length;i++){
+      const key = keys[i];
+      const day = readWeeklyDayFromForm(key);
+      const values = [day.start,day.lunchOut,day.lunchReturn,day.end];
+      const filled = values.filter(Boolean).length;
+
+      if(filled > 0 && filled < 4){
+        alert('Complete os 4 horários de ' + WEEK_DAY_LABELS[key] + ' ou deixe o dia inteiro vazio para folga.');
+        return;
+      }
+      if(filled === 4){
+        weekly[key] = day;
+        configuredDays++;
+      }
+    }
+
+    if(configuredDays === 0){
+      alert('Configure pelo menos um dia da semana.');
       return;
     }
 
@@ -3200,31 +3410,33 @@
       localStorage.setItem('manualFirstName',first.charAt(0).toUpperCase()+first.slice(1).toLowerCase());
     }
 
-    localStorage.setItem('manualScheduleStart',start);
-    localStorage.setItem('manualScheduleEnd',end);
-    localStorage.setItem('manualScheduleBreak',lunch);
+    localStorage.setItem('manualWeeklySchedule',JSON.stringify(weekly));
+    localStorage.removeItem('manualScheduleStart');
+    localStorage.removeItem('manualScheduleEnd');
+    localStorage.removeItem('manualScheduleBreak');
 
     closeManualScheduleModal();
     refreshIntervalUI();
     updateScheduledWorkCard();
     updateManualScheduleSummary();
+    updateManualReturnSuggestion();
+
     const greet = document.getElementById('greetMain');
     const savedName = localStorage.getItem('manualFirstName');
     if(greet && savedName) greet.textContent = 'Olá, ' + savedName + '!';
+
     applySeniorEvents(manualEvents(loadManualTimes()));
-    showToast('Jornada configurada.');
+    showToast('Jornada semanal salva.');
   }
 
-  function configureManualSchedule(){
-    openManualScheduleModal();
-  }
+  function configureManualSchedule(){ openManualScheduleModal(); }
 
   function initManualMode(){
     applySeniorEvents(manualEvents(loadManualTimes()));
     updateManualClockUI();
     updateManualScheduleSummary();
     const schedule = getExpectedSchedule();
-    if(!schedule.start || !schedule.end || getLunchIntervalMinutes() <= 0){
+    if(!schedule.start || !schedule.lunchOut || !schedule.lunchReturn || !schedule.end){
       setTimeout(openManualScheduleModal,450);
     }
   }
