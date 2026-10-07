@@ -2290,6 +2290,37 @@
     }catch(_){}
   };
 
+  function clearSeniorDayData(dayKey){
+    const day = dayKey || new Date().toLocaleDateString('pt-BR');
+    localStorage.removeItem('seniorClockings:' + day);
+
+    try{
+      let history = JSON.parse(localStorage.getItem('historicoAlmoco') || '[]');
+      if(Array.isArray(history)){
+        history = history.filter(function(item){
+          return !(item && item.data === day && (item.origem === 'Senior' || !item.origem));
+        });
+        if(history.length) localStorage.setItem('historicoAlmoco',JSON.stringify(history));
+        else localStorage.removeItem('historicoAlmoco');
+      }
+    }catch(_){
+      localStorage.removeItem('historicoAlmoco');
+    }
+
+    try{
+      const active = JSON.parse(localStorage.getItem('almocoAtivo') || 'null');
+      if(active && active.data){
+        const activeDay = new Date(active.data).toLocaleDateString('pt-BR');
+        if(activeDay === day) localStorage.removeItem('almocoAtivo');
+      }
+    }catch(_){
+      localStorage.removeItem('almocoAtivo');
+    }
+
+    mostrarHistorico();
+    atualizarEstatisticas();
+  }
+
   window.receiveSeniorClockings = function(raw){
     try{
       const data = typeof raw === 'string' ? JSON.parse(raw) : raw;
@@ -2303,8 +2334,17 @@
         if(data.loggedIn === false){
           setSeniorVisual('disconnected','Toque aqui para abrir a Senior e fazer login.');
         } else {
-          setSeniorVisual('connected',data.message || 'Senior aberta • aguardando os comprovantes.');
           const dayKey = data.day || new Date().toLocaleDateString('pt-BR');
+          const explicitlyEmpty = data.empty === true || /nenhuma marcação encontrada/i.test(String(data.message || ''));
+
+          if(explicitlyEmpty){
+            clearSeniorDayData(dayKey);
+            setSeniorVisual('connected','Conectado à Senior. Nenhuma marcação encontrada hoje.');
+            applySeniorEvents([]);
+            return;
+          }
+
+          setSeniorVisual('connected',data.message || 'Senior aberta • aguardando os comprovantes.');
           let cached = [];
           try{ cached = JSON.parse(localStorage.getItem('seniorClockings:' + dayKey) || '[]'); }catch(_){ cached = []; }
           if(Array.isArray(cached) && cached.length){
@@ -2319,15 +2359,23 @@
       let events = sanitizeSeniorClockings(data);
       const dayKey = data.day || new Date().toLocaleDateString('pt-BR');
       const cacheKey = 'seniorClockings:' + dayKey;
+      const explicitlyEmpty = data.empty === true;
       let cached = [];
       try{ cached = JSON.parse(localStorage.getItem(cacheKey) || '[]'); }catch(_){ cached = []; }
 
-      // A página da Senior às vezes renderiza só uma batida durante a atualização.
-      // Nunca substituímos um conjunto maior do mesmo dia por um conjunto menor.
-      if(Array.isArray(cached) && cached.length > events.length){
-        events = cached;
-      } else if(events.length){
-        localStorage.setItem(cacheKey,JSON.stringify(events));
+      if(explicitlyEmpty){
+        // A Senior confirmou que HOJE está sem marcações.
+        // Apaga qualquer cache/histórico falso que possa ter vindo do dia anterior.
+        events = [];
+        clearSeniorDayData(dayKey);
+      } else {
+        // A página da Senior às vezes renderiza parcialmente durante a atualização.
+        // Só preservamos cache maior quando a leitura atual não foi declarada vazia.
+        if(Array.isArray(cached) && cached.length > events.length){
+          events = cached;
+        } else if(events.length){
+          localStorage.setItem(cacheKey,JSON.stringify(events));
+        }
       }
 
       const times = events.map(function(e){ return e.time; });
@@ -2340,7 +2388,11 @@
           : 'Conectado à Senior. Nenhuma marcação encontrada hoje.'
       );
       applySeniorEvents(events);
-      if(times.length) showToast('Marcações atualizadas pela tela da Senior.');
+      if(times.length){
+        showToast('Marcações atualizadas pela tela da Senior.');
+      } else if(explicitlyEmpty){
+        showToast('Senior sem marcações para hoje.');
+      }
     }catch(error){
       setSeniorVisual('connected','Senior conectada • falha ao interpretar os comprovantes.');
     }
