@@ -62,6 +62,9 @@ public class MainActivity extends Activity {
     private String pendingUpdateUrl = null;
     private String activeUpdateUrl = null;
     private BroadcastReceiver updateDownloadReceiver;
+    private static final String PREFS_ALARMS = "controle_ponto_alarms";
+    private static final String PREF_LABEL_BEFORE = "clock_alarm_before_label";
+    private static final String PREF_LABEL_RETURN = "clock_alarm_return_label";
 
     private final String EXPAND_RECEIPTS_JS =
             "(function(){" +
@@ -836,7 +839,7 @@ public class MainActivity extends Activity {
         }
     }
 
-    private void createSystemClockAlarm(long triggerAtMillis, String message) {
+    private void createSystemClockAlarm(long triggerAtMillis, String label, int cleanupRequestCode) {
         try {
             Calendar when = Calendar.getInstance();
             when.setTimeInMillis(triggerAtMillis);
@@ -844,14 +847,91 @@ public class MainActivity extends Activity {
             Intent alarmIntent = new Intent(AlarmClock.ACTION_SET_ALARM);
             alarmIntent.putExtra(AlarmClock.EXTRA_HOUR, when.get(Calendar.HOUR_OF_DAY));
             alarmIntent.putExtra(AlarmClock.EXTRA_MINUTES, when.get(Calendar.MINUTE));
-            alarmIntent.putExtra(AlarmClock.EXTRA_MESSAGE, message);
+            alarmIntent.putExtra(AlarmClock.EXTRA_MESSAGE, label);
             alarmIntent.putExtra(AlarmClock.EXTRA_SKIP_UI, true);
             alarmIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 
             if (alarmIntent.resolveActivity(getPackageManager()) != null) {
                 startActivity(alarmIntent);
+                scheduleClockAlarmCleanup(
+                        triggerAtMillis + (2L * 60L * 1000L),
+                        cleanupRequestCode,
+                        label
+                );
             }
         } catch (Exception ignored) {}
+    }
+
+    private void scheduleClockAlarmCleanup(long cleanupAtMillis, int requestCode, String label) {
+        AlarmManager alarmManager = (AlarmManager) getSystemService(ALARM_SERVICE);
+        if (alarmManager == null || label == null || label.isBlank()) return;
+
+        Intent cleanupIntent = new Intent(this, ClockAlarmCleanupReceiver.class);
+        cleanupIntent.putExtra("alarm_label", label);
+
+        PendingIntent pendingIntent = PendingIntent.getBroadcast(
+                this,
+                requestCode,
+                cleanupIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
+
+        try {
+            if (Build.VERSION.SDK_INT >= 23) {
+                alarmManager.setExactAndAllowWhileIdle(
+                        AlarmManager.RTC_WAKEUP,
+                        cleanupAtMillis,
+                        pendingIntent
+                );
+            } else {
+                alarmManager.setExact(
+                        AlarmManager.RTC_WAKEUP,
+                        cleanupAtMillis,
+                        pendingIntent
+                );
+            }
+        } catch (SecurityException exactDenied) {
+            alarmManager.set(
+                    AlarmManager.RTC_WAKEUP,
+                    cleanupAtMillis,
+                    pendingIntent
+            );
+        }
+    }
+
+    private void dismissSystemClockAlarm(String label) {
+        if (label == null || label.isBlank() || Build.VERSION.SDK_INT < 23) return;
+
+        try {
+            Intent dismissIntent = new Intent(AlarmClock.ACTION_DISMISS_ALARM);
+            dismissIntent.putExtra(
+                    AlarmClock.EXTRA_ALARM_SEARCH_MODE,
+                    AlarmClock.ALARM_SEARCH_MODE_LABEL
+            );
+            dismissIntent.putExtra(AlarmClock.EXTRA_MESSAGE, label);
+            dismissIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+
+            if (dismissIntent.resolveActivity(getPackageManager()) != null) {
+                startActivity(dismissIntent);
+            }
+        } catch (Exception ignored) {}
+    }
+
+    private void cancelClockCleanup(int requestCode) {
+        AlarmManager alarmManager = (AlarmManager) getSystemService(ALARM_SERVICE);
+        if (alarmManager == null) return;
+
+        Intent cleanupIntent = new Intent(this, ClockAlarmCleanupReceiver.class);
+        PendingIntent pendingIntent = PendingIntent.getBroadcast(
+                this,
+                requestCode,
+                cleanupIntent,
+                PendingIntent.FLAG_NO_CREATE | PendingIntent.FLAG_IMMUTABLE
+        );
+        if (pendingIntent != null) {
+            alarmManager.cancel(pendingIntent);
+            pendingIntent.cancel();
+        }
     }
 
     private void scheduleNativeReturnAlarms(String returnTime) {
@@ -877,11 +957,22 @@ public class MainActivity extends Activity {
             long exactAt = exact.getTimeInMillis();
             long beforeAt = exactAt - (3L * 60L * 1000L);
 
-            // Além do alerta interno, cria alarmes reais no app Relógio do Android.
-            // Em aparelhos/relógios pareados que sincronizam alarmes do telefone,
-            // isso permite que o smartwatch toque como alarme, não só como notificação.
+            String stamp = String.format(
+                    java.util.Locale.US,
+                    "%1$tY%1$tm%1$td-%1$tH%1$tM",
+                    exactAt
+            );
+            String beforeLabel = "Controle de Ponto - 3 min - " + stamp;
+            String returnLabel = "Controle de Ponto - retorno - " + stamp;
+
+            getSharedPreferences(PREFS_ALARMS, MODE_PRIVATE)
+                    .edit()
+                    .putString(PREF_LABEL_BEFORE, beforeLabel)
+                    .putString(PREF_LABEL_RETURN, returnLabel)
+                    .apply();
+
             if (beforeAt > System.currentTimeMillis()) {
-                createSystemClockAlarm(beforeAt, "Controle de Ponto • faltam 3 minutos");
+                createSystemClockAlarm(beforeAt, beforeLabel, 7401);
                 scheduleOneReturnAlarm(
                         beforeAt,
                         7301,
@@ -890,7 +981,7 @@ public class MainActivity extends Activity {
                 );
             }
 
-            createSystemClockAlarm(exactAt, "Controle de Ponto • hora de retornar");
+            createSystemClockAlarm(exactAt, returnLabel, 7402);
             scheduleOneReturnAlarm(
                     exactAt,
                     7302,
@@ -953,6 +1044,18 @@ public class MainActivity extends Activity {
 
     private void cancelNativeReturnAlarms() {
         AlarmManager alarmManager = (AlarmManager) getSystemService(ALARM_SERVICE);
+
+        android.content.SharedPreferences prefs =
+                getSharedPreferences(PREFS_ALARMS, MODE_PRIVATE);
+        String beforeLabel = prefs.getString(PREF_LABEL_BEFORE, null);
+        String returnLabel = prefs.getString(PREF_LABEL_RETURN, null);
+
+        dismissSystemClockAlarm(beforeLabel);
+        dismissSystemClockAlarm(returnLabel);
+        cancelClockCleanup(7401);
+        cancelClockCleanup(7402);
+        prefs.edit().remove(PREF_LABEL_BEFORE).remove(PREF_LABEL_RETURN).apply();
+
         if (alarmManager == null) return;
 
         for (int requestCode : new int[]{7301, 7302}) {
