@@ -1,4 +1,4 @@
-name: Build e publicar Hora do Almoço Android
+name: Build e publicar Controle de Ponto Android
 
 on:
   workflow_dispatch:
@@ -103,17 +103,17 @@ jobs:
       - name: Prepare APK
         shell: bash
         run: |
-          cp android/app/build/outputs/apk/release/app-release.apk Hora-do-Almoco-Senior.apk
-          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs Hora-do-Almoco-Senior.apk
-          sha256sum Hora-do-Almoco-Senior.apk > Hora-do-Almoco-Senior.apk.sha256
+          cp android/app/build/outputs/apk/release/app-release.apk Controle-de-Ponto-Senior.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs Controle-de-Ponto-Senior.apk
+          sha256sum Controle-de-Ponto-Senior.apk > Controle-de-Ponto-Senior.apk.sha256
 
       - name: Upload signed APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Hora-do-Almoco-Senior-v${{ steps.version.outputs.name }}
+          name: Controle-de-Ponto-Senior-v${{ steps.version.outputs.name }}
           path: |
-            Hora-do-Almoco-Senior.apk
-            Hora-do-Almoco-Senior.apk.sha256
+            Controle-de-Ponto-Senior.apk
+            Controle-de-Ponto-Senior.apk.sha256
           if-no-files-found: error
           retention-days: 90
 
@@ -125,15 +125,15 @@ jobs:
           VERSION_NAME: ${{ steps.version.outputs.name }}
         run: |
           TAG="v$VERSION_NAME"
-          NOTES="APK estável do Hora do Almoço $VERSION_NAME, com ícone oficial laranja e talheres."
+          NOTES="APK estável do Controle de Ponto $VERSION_NAME, com nova identidade visual, ícone de relógio e nome Controle de Ponto."
 
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" Hora-do-Almoco-Senior.apk Hora-do-Almoco-Senior.apk.sha256 --clobber
-            gh release edit "$TAG" --title "Hora do Almoço $VERSION_NAME" --notes "$NOTES"
+            gh release upload "$TAG" Controle-de-Ponto-Senior.apk Controle-de-Ponto-Senior.apk.sha256 --clobber
+            gh release edit "$TAG" --title "Controle de Ponto $VERSION_NAME" --notes "$NOTES"
           else
-            gh release create "$TAG" Hora-do-Almoco-Senior.apk Hora-do-Almoco-Senior.apk.sha256 \
+            gh release create "$TAG" Controle-de-Ponto-Senior.apk Controle-de-Ponto-Senior.apk.sha256 \
               --target "$GITHUB_SHA" \
-              --title "Hora do Almoço $VERSION_NAME" \
+              --title "Controle de Ponto $VERSION_NAME" \
               --notes "$NOTES"
           fi
 
@@ -145,7 +145,7 @@ jobs:
           VERSION_CODE: ${{ steps.version.outputs.code }}
         run: |
           TAG="v$VERSION_NAME"
-          APK_URL="https://github.com/Luizfcalori/Ponto-do-almo-o-/releases/download/$TAG/Hora-do-Almoco-Senior.apk"
+          APK_URL="https://github.com/Luizfcalori/Ponto-do-almo-o-/releases/download/$TAG/Controle-de-Ponto-Senior.apk"
 
           git fetch origin main
           git checkout main
@@ -155,7 +155,7 @@ jobs:
             --arg versionName "$VERSION_NAME" \
             --argjson versionCode "$VERSION_CODE" \
             --arg apkUrl "$APK_URL" \
-            --arg notes "Novo ícone oficial do Hora do Almoço." \
+            --arg notes "Nova identidade visual do Controle de Ponto, com novo nome, logo e ícone de relógio." \
             '{versionName:$versionName,versionCode:$versionCode,apkUrl:$apkUrl,notes:$notes}' \
             > app-update.json
 

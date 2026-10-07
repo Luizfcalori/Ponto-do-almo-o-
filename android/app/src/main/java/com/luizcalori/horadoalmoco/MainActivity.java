@@ -407,7 +407,7 @@ public class MainActivity extends Activity {
         back.setOnClickListener(v -> showDashboard());
 
         TextView title = new TextView(this);
-        title.setText("Hora do Almoço + Senior");
+        title.setText("Controle de Ponto + Senior");
         title.setTextColor(Color.WHITE);
         title.setTextSize(18);
         title.setGravity(Gravity.CENTER_VERTICAL);
@@ -694,7 +694,7 @@ public class MainActivity extends Activity {
             pendingUpdateUrl = url;
             sendUpdaterStatus(
                     "permission_required",
-                    "Autorize o Hora do Almoço a instalar atualizações e volte para o app."
+                    "Autorize o Controle de Ponto a instalar atualizações e volte para o app."
             );
             try {
                 Intent intent = new Intent(
@@ -719,9 +719,9 @@ public class MainActivity extends Activity {
                 return;
             }
 
-            String fileName = "Hora-do-Almoco-update-" + System.currentTimeMillis() + ".apk";
+            String fileName = "Controle-de-Ponto-update-" + System.currentTimeMillis() + ".apk";
             DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url));
-            request.setTitle("Atualização do Hora do Almoço");
+            request.setTitle("Atualização do Controle de Ponto");
             request.setDescription("Baixando a nova versão do aplicativo.");
             request.setMimeType("application/vnd.android.package-archive");
             request.setAllowedOverMetered(true);

@@ -9,7 +9,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#081a29">
-  <title>Hora do Almoço</title>
+  <title>Controle de Ponto</title>
   <style>
     :root{
       --bg:#081a29;
@@ -66,11 +66,13 @@
     .topbar{justify-content:space-between;gap:16px}
     .brand{gap:12px}
     .brand-icon{
-      width:50px;height:50px;border-radius:17px;display:grid;place-items:center;
-      background:linear-gradient(145deg,var(--orange),var(--orange-2));
-      box-shadow:0 12px 30px rgba(255,122,0,.35);font-size:24px
+      width:50px;height:50px;border-radius:17px;display:grid;place-items:center;overflow:hidden;
+      background:linear-gradient(145deg,#ff6f00,#ff8a0a 55%,#ffa53d);
+      box-shadow:0 12px 30px rgba(255,122,0,.35)
     }
-    .brand-title{font-weight:900;font-size:21px;letter-spacing:-.4px}
+    .app-logo-svg{width:43px;height:43px;display:block}
+    .brand-title{font-weight:950;font-size:19px;letter-spacing:-.45px;white-space:nowrap}
+    .brand-title span{color:#ff9b3d}
     .brand-sub{font-size:12.5px;color:#b9c7d4;margin-top:2px}
     .icon-btn{
       width:42px;height:42px;border-radius:14px;border:1px solid rgba(255,255,255,.15);
@@ -491,7 +493,8 @@
     .profile-card{
       display:flex;gap:13px;align-items:center;padding:16px;border-radius:20px;background:#0c2334;color:#fff;margin:16px
     }
-    .avatar{width:54px;height:54px;border-radius:17px;display:grid;place-items:center;background:linear-gradient(145deg,#ff7300,#ff9d40);font-size:25px}
+    .avatar{width:54px;height:54px;border-radius:17px;display:grid;place-items:center;overflow:hidden;background:linear-gradient(145deg,#ff6f00,#ff8a0a 55%,#ffa53d);box-shadow:0 10px 24px rgba(255,122,0,.22)}
+    .avatar .app-logo-svg{width:47px;height:47px}
     .profile-name{font-weight:900;font-size:17px}
     .profile-sub{font-size:11.5px;color:#bdcad5;margin-top:3px}
 
@@ -593,9 +596,16 @@
     <div class="home-hero">
       <div class="topbar">
         <div class="brand">
-          <div class="brand-icon">🍴</div>
+          <div class="brand-icon"><svg class="app-logo-svg" viewBox="0 0 64 64" aria-hidden="true">
+  <circle cx="32" cy="32" r="24" fill="#08243A"/>
+  <circle cx="32" cy="32" r="19" fill="none" stroke="#FFB02E" stroke-width="4"/>
+  <path d="M32 20 V34 L41 40" fill="none" stroke="#F8FAFC" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="47" cy="17" r="5.5" fill="#21D7B3" stroke="#0B5362" stroke-width="1.4"/>
+  <circle cx="18.5" cy="38.5" r="1.7" fill="#FFC447"/>
+  <rect x="30.5" y="46" width="3" height="5" rx="1.5" fill="#F6A81A"/>
+</svg></div>
           <div>
-            <div class="brand-title">Hora do Almoço</div>
+            <div class="brand-title">Controle de <span>Ponto</span></div>
             <div class="brand-sub">Seu tempo, no ponto certo.</div>
           </div>
         </div>
@@ -625,7 +635,7 @@
       <div class="clock-zone">
         <div class="clock-ring" id="homeClockRing">
           <div class="clock-content">
-            <div class="clock-icon" id="clockIcon">🍴</div>
+            <div class="clock-icon" id="clockIcon">◷</div>
             <div class="clock-state" id="workState">EM TRABALHO</div>
             <div class="clock-time" id="currentTime">--:--</div>
             <div class="clock-subtitle" id="clockSubtitle"></div>
@@ -683,7 +693,7 @@
 
   <section id="view-lunch" class="view">
     <div class="page-header">
-      <div class="page-title">Hora do Almoço</div>
+      <div class="page-title">Controle de Ponto</div>
       <div class="page-sub" id="lunchPageSub">Intervalo conforme sua escala da Senior</div>
     </div>
 
@@ -895,13 +905,20 @@
   <section id="view-profile" class="view">
     <div class="page-header">
       <div class="page-title">Perfil e configurações</div>
-      <div class="page-sub">Hora do Almoço</div>
+      <div class="page-sub">Controle de Ponto</div>
     </div>
 
     <div class="profile-card">
-      <div class="avatar">🍴</div>
+      <div class="avatar"><svg class="app-logo-svg" viewBox="0 0 64 64" aria-hidden="true">
+  <circle cx="32" cy="32" r="24" fill="#08243A"/>
+  <circle cx="32" cy="32" r="19" fill="none" stroke="#FFB02E" stroke-width="4"/>
+  <path d="M32 20 V34 L41 40" fill="none" stroke="#F8FAFC" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="47" cy="17" r="5.5" fill="#21D7B3" stroke="#0B5362" stroke-width="1.4"/>
+  <circle cx="18.5" cy="38.5" r="1.7" fill="#FFC447"/>
+  <rect x="30.5" y="46" width="3" height="5" rx="1.5" fill="#F6A81A"/>
+</svg></div>
       <div>
-        <div class="profile-name">Hora do Almoço</div>
+        <div class="profile-name">Controle de Ponto</div>
         <div class="profile-sub">Configuração pessoal de intervalo e sincronização</div>
       </div>
     </div>
@@ -1112,7 +1129,7 @@
       ring.classList.add('enhanced','mode-done');
       if(icon) icon.textContent = '✓';
     } else {
-      if(icon) icon.textContent = '🍴';
+      if(icon) icon.textContent = '◷';
     }
 
     if(subtitle) subtitle.textContent = '';
@@ -1589,7 +1606,7 @@
     document.getElementById('progressEnd').textContent = retorno;
     document.getElementById('progressCard').style.display = 'block';
     document.getElementById('lunchHeroTitle').textContent = 'Almoço iniciado!';
-    document.getElementById('lunchHeroText').textContent = 'Sua saída foi registrada no Hora do Almoço e o retorno já foi calculado.';
+    document.getElementById('lunchHeroText').textContent = 'Sua saída foi registrada no Controle de Ponto e o retorno já foi calculado.';
     document.getElementById('sumLunchOut').textContent = valor;
     document.getElementById('sumReturn').textContent = retorno;
     renderLunchClock(valor,retorno);
@@ -2982,7 +2999,7 @@
     if(delayBefore > 0 && delayBefore <= 24*60*60*1000){
       setTimeout(function(){
         try{
-          new Notification('Hora do Almoço',{
+          new Notification('Controle de Ponto',{
             body:'Faltam 3 minutos para bater o ponto de retorno.'
           });
         }catch(_){}
@@ -2993,7 +3010,7 @@
     if(delayExact > 0 && delayExact <= 24*60*60*1000){
       returnNotificationTimer = setTimeout(function(){
         try{
-          new Notification('Hora do Almoço',{
+          new Notification('Controle de Ponto',{
             body:'Hora de bater o ponto de retorno do almoço.'
           });
         }catch(_){}

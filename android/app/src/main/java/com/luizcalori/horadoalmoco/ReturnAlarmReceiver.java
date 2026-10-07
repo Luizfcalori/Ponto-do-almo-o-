@@ -21,7 +21,7 @@ public class ReturnAlarmReceiver extends BroadcastReceiver {
         String message = intent.getStringExtra("message");
         int notificationId = intent.getIntExtra("notification_id", 7302);
 
-        if (title == null || title.isBlank()) title = "Hora do Almoço";
+        if (title == null || title.isBlank()) title = "Controle de Ponto";
         if (message == null || message.isBlank()) message = "Hora de bater o ponto de retorno do almoço.";
 
         NotificationManager manager =
