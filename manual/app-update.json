@@ -1,6 +1,6 @@
 {
-  "versionName": "1.0.4",
-  "versionCode": 5,
-  "apkUrl": "https://github.com/Luizfcalori/Ponto-do-almo-o-/releases/download/manual-v1.0.4/Hora-do-Almoco-Manual.apk",
-  "notes": "Correção da limpeza do histórico: apaga também as marcações manuais salvas e não recria o histórico ao atualizar a página."
+  "versionName": "1.0.5",
+  "versionCode": 6,
+  "apkUrl": "https://github.com/Luizfcalori/Ponto-do-almo-o-/releases/download/manual-v1.0.5/Hora-do-Almoco-Manual.apk",
+  "notes": "Adiciona folga explícita por dia da semana e separa claramente a jornada prevista das marcações reais."
 }
