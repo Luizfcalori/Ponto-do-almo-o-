@@ -2001,7 +2001,7 @@
 
   function workMinutesFromRecord(item){
     item = item || {};
-    const schedule = getExpectedSchedule();
+    const schedule = getExpectedSchedule(item.data);
     const scheduleStart = item.scheduleStart || schedule.start;
     const scheduleEnd = item.scheduleEnd || schedule.end;
 
@@ -2020,7 +2020,7 @@
 
   function expectedWorkMinutesFromRecord(item){
     item = item || {};
-    const schedule = getExpectedSchedule();
+    const schedule = getExpectedSchedule(item.data);
     const start = minutesFromTime(item.scheduleStart || schedule.start);
     const end = minutesFromTime(item.scheduleEnd || schedule.end);
     if(start === null || end === null) return null;
@@ -2031,8 +2031,18 @@
     // Usa o intervalo previsto pela escala. Em registros antigos sem essa informação,
     // usa o intervalo real para não inventar atraso/hora extra retroativamente.
     let plannedBreak = parseDurationMinutes(item.scheduleBreak);
-    if(plannedBreak === null){
-      plannedBreak = lunchMinutesFromRecord(item);
+
+    if((plannedBreak === null || plannedBreak === 0) && item.scheduleLunchOut && item.scheduleLunchReturn){
+      const out = minutesFromTime(item.scheduleLunchOut);
+      const back = minutesFromTime(item.scheduleLunchReturn);
+      if(out !== null && back !== null){
+        plannedBreak = back-out;
+        if(plannedBreak < 0) plannedBreak += 24*60;
+      }
+    }
+
+    if(plannedBreak === null || plannedBreak === 0){
+      plannedBreak = scheduleBreakMinutes(schedule) || lunchMinutesFromRecord(item);
     }
     if(plannedBreak === null) return null;
 
@@ -2048,7 +2058,8 @@
 
   function normalizeHistoryRecord(item){
     item = item || {};
-    const schedule = getExpectedSchedule();
+    const schedule = getExpectedSchedule(item.data);
+    const plannedBreak = scheduleBreakMinutes(schedule);
     return {
       data:item.data || '',
       entrada:item.entrada || null,
@@ -2057,8 +2068,10 @@
       retorno:item.retorno || null,
       saidaFinal:item.saidaFinal || item.exit || null,
       scheduleStart:item.scheduleStart || schedule.start,
+      scheduleLunchOut:item.scheduleLunchOut || schedule.lunchOut || null,
+      scheduleLunchReturn:item.scheduleLunchReturn || schedule.lunchReturn || null,
       scheduleEnd:item.scheduleEnd || schedule.end,
-      scheduleBreak:item.scheduleBreak || localStorage.getItem('manualScheduleBreak') || null,
+      scheduleBreak:item.scheduleBreak || (plannedBreak > 0 ? timeFromMinutes(plannedBreak) : null),
       origem:item.origem || 'App'
     };
   }
@@ -2097,7 +2110,8 @@
     if(!entrada && !saidaAlmoco && !retorno && !saidaFinal) return;
     let historico = JSON.parse(localStorage.getItem('historicoAlmocoManual') || '[]');
     const dataFinal = dataRegistro || new Date().toLocaleDateString('pt-BR');
-    const schedule = getExpectedSchedule();
+    const schedule = getExpectedSchedule(dataFinal);
+    const plannedBreak = scheduleBreakMinutes(schedule);
     const registro = {
       data:dataFinal,
       entrada:entrada || null,
@@ -2106,9 +2120,11 @@
       retorno:retorno || null,
       saidaFinal:saidaFinal || null,
       scheduleStart:schedule.start,
+      scheduleLunchOut:schedule.lunchOut,
+      scheduleLunchReturn:schedule.lunchReturn,
       scheduleEnd:schedule.end,
-      scheduleBreak:localStorage.getItem('manualScheduleBreak') || null,
-      origem:origem || 'Senior'
+      scheduleBreak:plannedBreak > 0 ? timeFromMinutes(plannedBreak) : null,
+      origem:origem || 'Manual'
     };
 
     const idx = historico.findIndex(function(item){ return item.data === dataFinal; });
