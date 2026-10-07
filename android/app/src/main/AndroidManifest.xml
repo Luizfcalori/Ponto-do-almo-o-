@@ -10,6 +10,8 @@
         android:allowBackup="true"
         android:usesCleartextTraffic="false"
         android:label="Hora do Almoço"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:theme="@style/AppTheme">
         <receiver
             android:name=".ReturnAlarmReceiver"

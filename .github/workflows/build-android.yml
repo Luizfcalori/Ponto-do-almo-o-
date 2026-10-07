@@ -9,8 +9,13 @@ on:
         default: true
         type: boolean
   push:
+    branches:
+      - "main"
     tags:
       - "v*"
+    paths:
+      - "android/**"
+      - ".github/workflows/build-android.yml"
 
 permissions:
   contents: write
@@ -113,14 +118,14 @@ jobs:
           retention-days: 90
 
       - name: Publish stable GitHub Release
-        if: github.ref_type == 'tag' || inputs.publish_release == true
+        if: github.event_name == 'push' || inputs.publish_release == true
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION_NAME: ${{ steps.version.outputs.name }}
         run: |
           TAG="v$VERSION_NAME"
-          NOTES="APK estável do Hora do Almoço $VERSION_NAME, assinado com a chave fixa do aplicativo."
+          NOTES="APK estável do Hora do Almoço $VERSION_NAME, com ícone oficial laranja e talheres."
 
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" Hora-do-Almoco-Senior.apk Hora-do-Almoco-Senior.apk.sha256 --clobber
@@ -133,7 +138,7 @@ jobs:
           fi
 
       - name: Update app updater channel
-        if: github.ref_type == 'tag' || inputs.publish_release == true
+        if: github.event_name == 'push' || inputs.publish_release == true
         shell: bash
         env:
           VERSION_NAME: ${{ steps.version.outputs.name }}
@@ -150,7 +155,7 @@ jobs:
             --arg versionName "$VERSION_NAME" \
             --argjson versionCode "$VERSION_CODE" \
             --arg apkUrl "$APK_URL" \
-            --arg notes "Atualização estável do Hora do Almoço." \
+            --arg notes "Novo ícone oficial do Hora do Almoço." \
             '{versionName:$versionName,versionCode:$versionCode,apkUrl:$apkUrl,notes:$notes}' \
             > app-update.json
 
