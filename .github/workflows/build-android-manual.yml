@@ -1,0 +1,100 @@
+name: Build Hora do Almoço Manual Android
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "manual/index.html"
+      - "android/manualapp/**"
+      - "android/settings.gradle"
+      - ".github/workflows/build-android-manual.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+      SIGNING_PASSWORD: ${{ secrets.HORA_ALMOCO_SIGNING_PASSWORD }}
+      KEY_ALIAS: hora-do-almoco
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install Android 35
+        shell: bash
+        run: |
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMANAGER" ]; then
+            SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -path "*/bin/sdkmanager" | sort | tail -n 1)"
+          fi
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+
+      - name: Restore signing key
+        shell: bash
+        run: |
+          test -n "$SIGNING_PASSWORD"
+          base64 --decode android/signing/hora-do-almoco-release.jks.b64 > "$RUNNER_TEMP/hora-do-almoco-release.jks"
+
+      - name: Build signed APK
+        working-directory: android
+        shell: bash
+        run: |
+          gradle :manualapp:assembleRelease --stacktrace \
+            -Pandroid.injected.signing.store.file="$RUNNER_TEMP/hora-do-almoco-release.jks" \
+            -Pandroid.injected.signing.store.password="$SIGNING_PASSWORD" \
+            -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
+            -Pandroid.injected.signing.key.password="$SIGNING_PASSWORD"
+
+      - name: Prepare APK
+        shell: bash
+        run: |
+          cp android/manualapp/build/outputs/apk/release/manualapp-release.apk Hora-do-Almoco-Manual.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs Hora-do-Almoco-Manual.apk
+          sha256sum Hora-do-Almoco-Manual.apk > Hora-do-Almoco-Manual.apk.sha256
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Hora-do-Almoco-Manual-v1.0.0
+          path: |
+            Hora-do-Almoco-Manual.apk
+            Hora-do-Almoco-Manual.apk.sha256
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Publish release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="manual-v1.0.0"
+          NOTES="Primeira versão do Hora do Almoço Manual, com entrada, saída para almoço, retorno e saída registradas pelo usuário."
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" Hora-do-Almoco-Manual.apk Hora-do-Almoco-Manual.apk.sha256 --clobber
+            gh release edit "$TAG" --title "Hora do Almoço Manual 1.0.0" --notes "$NOTES"
+          else
+            gh release create "$TAG" Hora-do-Almoco-Manual.apk Hora-do-Almoco-Manual.apk.sha256 \
+              --target "$GITHUB_SHA" \
+              --title "Hora do Almoço Manual 1.0.0" \
+              --notes "$NOTES"
+          fi
