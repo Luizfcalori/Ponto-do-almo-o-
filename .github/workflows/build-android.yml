@@ -125,7 +125,7 @@ jobs:
           VERSION_NAME: ${{ steps.version.outputs.name }}
         run: |
           TAG="v$VERSION_NAME"
-          NOTES="Controle de Ponto $VERSION_NAME: cria alarmes reais do sistema para o retorno do almoço, além do alerta interno."
+          NOTES="Controle de Ponto $VERSION_NAME: cria e limpa automaticamente os alarmes do retorno do almoço."
 
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" Controle-de-Ponto-Senior.apk Controle-de-Ponto-Senior.apk.sha256 --clobber
@@ -155,7 +155,7 @@ jobs:
             --arg versionName "$VERSION_NAME" \
             --argjson versionCode "$VERSION_CODE" \
             --arg apkUrl "$APK_URL" \
-            --arg notes "Cria alarmes reais do sistema para o retorno do almoço e melhora integração com smartwatch pareado." \
+            --arg notes "Cria e limpa automaticamente os alarmes de retorno sem mexer nos alarmes pessoais." \
             '{versionName:$versionName,versionCode:$versionCode,apkUrl:$apkUrl,notes:$notes}' \
             > app-update.json
 
