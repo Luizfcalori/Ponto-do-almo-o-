@@ -2,5 +2,5 @@
   "versionName": "2.2.3",
   "versionCode": 17,
   "apkUrl": "https://github.com/Luizfcalori/Ponto-do-almo-o-/releases/download/v2.2.3/Controle-de-Ponto-Senior.apk",
-  "notes": "Transforma os avisos de retorno em alarmes reais do Relógio do Android, mantendo também o alerta interno. Em relógios pareados que sincronizam alarmes do telefone, o smartwatch pode tocar junto."
+  "notes": "Cria alarmes reais do sistema para o retorno do almoço e melhora integração com smartwatch pareado."
 }
