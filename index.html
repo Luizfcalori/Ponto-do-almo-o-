@@ -2359,7 +2359,11 @@
       let events = sanitizeSeniorClockings(data);
       const dayKey = data.day || new Date().toLocaleDateString('pt-BR');
       const cacheKey = 'seniorClockings:' + dayKey;
-      const explicitlyEmpty = data.empty === true;
+      const evidenceText = Array.isArray(data.evidence)
+        ? data.evidence.join(' ').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase()
+        : '';
+      const explicitlyEmpty = data.empty === true ||
+        evidenceText.indexOf('NENHUMA MARCACAO ENCONTRADA') >= 0;
       let cached = [];
       try{ cached = JSON.parse(localStorage.getItem(cacheKey) || '[]'); }catch(_){ cached = []; }
 
