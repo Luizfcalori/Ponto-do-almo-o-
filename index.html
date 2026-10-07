@@ -384,6 +384,18 @@
     .history-foot-label{font-size:8.8px;color:#7b8a9b}
     .history-duration{font-size:13px;font-weight:950;color:#0f172a;margin-top:2px}
     .history-duration.green{color:#0b8f62}
+    .history-balance{
+      margin-top:9px;padding:9px 11px;border-radius:12px;display:flex;align-items:center;
+      justify-content:space-between;gap:10px;font-size:10px;font-weight:850
+    }
+    .history-balance.ok{background:#eafaf3;color:#087653;border:1px solid #cbeedd}
+    .history-balance.extra{background:#eaf4ff;color:#1768bd;border:1px solid #cfe4fb}
+    .history-balance.delay{background:#fff0ef;color:#b9342e;border:1px solid #f7d1cf}
+    .history-balance.pending{background:#f5f7fa;color:#64748b;border:1px solid #e3e9ef}
+    .history-balance strong{font-size:11px}
+    .history-note{
+      margin-top:8px;color:#94a3b8;font-size:8.5px;line-height:1.35
+    }
     .history-actions{display:flex;justify-content:flex-end;margin-top:14px}
     .history-clear{
       border:0;background:transparent;color:#d83c32;font-size:10.5px;font-weight:850;padding:8px 4px
@@ -1535,6 +1547,18 @@
     return actual;
   }
 
+  function parseDurationMinutes(value){
+    if(value === null || value === undefined || value === '') return null;
+    const text = String(value).trim();
+    if(/^\d+$/.test(text)){
+      const numeric = Number(text);
+      return Number.isFinite(numeric) ? numeric : null;
+    }
+    const m = text.match(/^(\d{1,2}):(\d{2})$/);
+    if(!m) return null;
+    return Number(m[1])*60 + Number(m[2]);
+  }
+
   function workMinutesFromRecord(item){
     item = item || {};
     const schedule = getExpectedSchedule();
@@ -1554,6 +1578,34 @@
     return Math.max(0,span-lunch);
   }
 
+  function expectedWorkMinutesFromRecord(item){
+    item = item || {};
+    const schedule = getExpectedSchedule();
+    const start = minutesFromTime(item.scheduleStart || schedule.start);
+    const end = minutesFromTime(item.scheduleEnd || schedule.end);
+    if(start === null || end === null) return null;
+
+    let span = end-start;
+    if(span < 0) span += 24*60;
+
+    // Usa o intervalo previsto pela escala. Em registros antigos sem essa informação,
+    // usa o intervalo real para não inventar atraso/hora extra retroativamente.
+    let plannedBreak = parseDurationMinutes(item.scheduleBreak);
+    if(plannedBreak === null){
+      plannedBreak = lunchMinutesFromRecord(item);
+    }
+    if(plannedBreak === null) return null;
+
+    return Math.max(0,span-plannedBreak);
+  }
+
+  function workBalanceFromRecord(item){
+    const actual = workMinutesFromRecord(item);
+    const expected = expectedWorkMinutesFromRecord(item);
+    if(actual === null || expected === null || !item.saidaFinal) return null;
+    return actual-expected;
+  }
+
   function normalizeHistoryRecord(item){
     item = item || {};
     const schedule = getExpectedSchedule();
@@ -1566,6 +1618,7 @@
       saidaFinal:item.saidaFinal || item.exit || null,
       scheduleStart:item.scheduleStart || schedule.start,
       scheduleEnd:item.scheduleEnd || schedule.end,
+      scheduleBreak:item.scheduleBreak || localStorage.getItem('seniorScheduleBreak') || null,
       origem:item.origem || 'App'
     };
   }
@@ -1614,6 +1667,7 @@
       saidaFinal:saidaFinal || null,
       scheduleStart:schedule.start,
       scheduleEnd:schedule.end,
+      scheduleBreak:localStorage.getItem('seniorScheduleBreak') || null,
       origem:origem || 'Senior'
     };
 
@@ -1701,6 +1755,7 @@
     filtrado.forEach(function(registro){
       const duration = lunchMinutesFromRecord(registro);
       const workDuration = workMinutesFromRecord(registro);
+      const balance = workBalanceFromRecord(registro);
       const complete = !!registro.saidaFinal;
       const item = document.createElement('div');
       item.className = 'history-day-card';
@@ -1733,7 +1788,20 @@
             '<div class="history-foot-label">Período da jornada</div>' +
             '<div class="history-duration green">' + (workDuration === null ? '--' : formatMinutesCompact(workDuration)) + '</div>' +
           '</div>' +
-        '</div>';
+        '</div>' +
+        (function(){
+          if(balance === null){
+            return '<div class="history-balance pending"><span>Saldo do dia</span><strong>Aguardando jornada completa</strong></div>';
+          }
+          if(balance === 0){
+            return '<div class="history-balance ok"><span>✓ Jornada cumprida</span><strong>Saldo 0 min</strong></div>';
+          }
+          if(balance > 0){
+            return '<div class="history-balance extra"><span>Hora extra</span><strong>+' + formatMinutesCompact(balance) + '</strong></div>';
+          }
+          return '<div class="history-balance delay"><span>Atraso</span><strong>-' + formatMinutesCompact(Math.abs(balance)) + '</strong></div>';
+        })() +
+        '<div class="history-note">Cálculo informativo do app, com tolerância de 5 min na entrada e na saída. O fechamento oficial pode seguir regras da empresa/Senior.</div>';
       lista.appendChild(item);
     });
   }
