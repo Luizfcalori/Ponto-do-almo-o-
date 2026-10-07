@@ -2942,12 +2942,16 @@
   }
 
   function calcReturnFromTime(saida){
-    const schedule = getExpectedSchedule();
-    if(schedule && schedule.lunchReturn) return schedule.lunchReturn;
-
     const p = String(saida || '').split(':').map(Number);
+
+    // O horário previsto de retorno acompanha SEMPRE a duração do intervalo
+    // configurada na jornada do dia. Ex.: jornada prevê 17:00–18:00 = 1h.
+    // Se a pessoa realmente sair às 06:31, o retorno sugerido será 07:31,
+    // e nunca o horário fixo 18:00 da escala.
     const lunchMinutes = getLunchIntervalMinutes();
+
     if(p.length < 2 || Number.isNaN(p[0]) || Number.isNaN(p[1]) || lunchMinutes <= 0) return null;
+
     let total = (p[0]*60+p[1]+lunchMinutes)%(24*60);
     return pad(Math.floor(total/60))+':'+pad(total%60);
   }
