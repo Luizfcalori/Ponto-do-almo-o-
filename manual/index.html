@@ -420,6 +420,12 @@
     .history-edit-help{
       margin-top:7px;text-align:center;color:#94a3b8;font-size:8.5px
     }
+    .history-edit-status{
+      display:none;margin-top:10px;padding:10px 11px;border-radius:12px;font-size:10.5px;font-weight:800;line-height:1.35
+    }
+    .history-edit-status.show{display:block}
+    .history-edit-status.error{background:#fff0ef;color:#b9342e;border:1px solid #f4d0cd}
+    .history-edit-status.ok{background:#eafaf3;color:#087653;border:1px solid #cbeedd}
     .history-actions{display:flex;justify-content:flex-end;margin-top:14px}
     .history-clear{
       border:0;background:transparent;color:#d83c32;font-size:10.5px;font-weight:850;padding:8px 4px
@@ -543,7 +549,7 @@
     .toast{
       position:fixed;left:50%;transform:translateX(-50%);bottom:92px;width:calc(100% - 32px);max-width:488px;
       padding:13px 15px;border-radius:14px;background:#111827;color:#fff;font-size:12px;font-weight:700;
-      opacity:0;pointer-events:none;transition:.25s;z-index:30;box-shadow:0 12px 30px rgba(0,0,0,.25)
+      opacity:0;pointer-events:none;transition:.25s;z-index:90;box-shadow:0 12px 30px rgba(0,0,0,.25)
     }
     .toast.show{opacity:1}
 
@@ -1264,10 +1270,11 @@
       </div>
       <div class="field" style="margin-top:16px">
         <label id="historyTimeEditLabel" for="historyTimeEditInput">Horário</label>
-        <input id="historyTimeEditInput" type="time">
+        <input id="historyTimeEditInput" type="time" step="60">
       </div>
-      <button class="btn btn-orange" onclick="saveHistoryTimeEdit()">Salvar correção</button>
-      <button class="btn btn-outline" onclick="closeHistoryTimeEditor()" style="margin-top:8px">Cancelar</button>
+      <div id="historyTimeEditStatus" class="history-edit-status"></div>
+      <button type="button" class="btn btn-orange" id="historyTimeEditSaveBtn" onclick="saveHistoryTimeEdit()">Salvar correção</button>
+      <button type="button" class="btn btn-outline" onclick="closeHistoryTimeEditor()" style="margin-top:8px">Cancelar</button>
     </div>
   </div>
 
@@ -2339,6 +2346,30 @@
     }
   }
 
+  function setHistoryTimeEditStatus(message,type){
+    const status = document.getElementById('historyTimeEditStatus');
+    if(!status) return;
+    status.textContent = message || '';
+    status.className = 'history-edit-status' + (message ? ' show ' + (type || '') : '');
+  }
+
+  function validateHistoryTimeSequence(record){
+    const values = historyRecordTimes(record);
+    const minutes = values.map(minutesFromTime);
+
+    for(let i=1;i<values.length;i++){
+      if(values[i] && !values[i-1]){
+        return 'Existe uma marcação anterior vazia. Corrija primeiro a etapa anterior.';
+      }
+      if(values[i] && values[i-1] && minutes[i] < minutes[i-1]){
+        return historyTimeFieldLabel(
+          i === 1 ? 'saidaAlmoco' : i === 2 ? 'retorno' : 'saidaFinal'
+        ) + ' não pode ficar antes da marcação anterior.';
+      }
+    }
+    return '';
+  }
+
   function openHistoryTimeEditor(dateValue,field){
     let historico = [];
     try{ historico = JSON.parse(localStorage.getItem('historicoAlmocoManual') || '[]'); }catch(_){ historico = []; }
@@ -2363,6 +2394,7 @@
 
     if(sub) sub.textContent = dateValue + ' • ' + label;
     if(inputLabel) inputLabel.textContent = label;
+    setHistoryTimeEditStatus('','');
     if(input) input.value = current || '';
     if(modal) modal.classList.add('show');
     setTimeout(function(){ if(input) input.focus(); },120);
@@ -2380,46 +2412,89 @@
     const dateValue = historyTimeEditDate;
     const field = historyTimeEditField;
     const input = document.getElementById('historyTimeEditInput');
-    const value = input ? input.value : '';
+    const btn = document.getElementById('historyTimeEditSaveBtn');
+    const value = input ? String(input.value || '').trim() : '';
 
-    if(!dateValue || !field) return;
+    if(!dateValue || !field){
+      setHistoryTimeEditStatus('Não consegui identificar qual marcação está sendo editada. Feche e abra a correção novamente.','error');
+      return;
+    }
+
     if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(value)){
-      showToast('Informe um horário válido.');
+      setHistoryTimeEditStatus('Informe um horário válido no formato HH:MM.','error');
       return;
     }
 
-    let historico = [];
-    try{ historico = JSON.parse(localStorage.getItem('historicoAlmocoManual') || '[]'); }catch(_){ historico = []; }
-    if(!Array.isArray(historico)) historico = [];
-
-    const idx = historico.findIndex(function(item){ return item && item.data === dateValue; });
-    if(idx < 0){
-      closeHistoryTimeEditor();
-      showToast('Registro do dia não encontrado.');
-      return;
+    if(btn){
+      btn.disabled = true;
+      btn.textContent = 'Salvando...';
     }
 
-    const record = Object.assign({},historico[idx]);
-    record[field] = value;
-    if(field === 'saidaAlmoco') record.saida = value;
+    try{
+      let historico = [];
+      try{ historico = JSON.parse(localStorage.getItem('historicoAlmocoManual') || '[]'); }catch(_){ historico = []; }
+      if(!Array.isArray(historico)) historico = [];
 
-    const values = historyRecordTimes(record);
-    const minutes = values.map(minutesFromTime);
-    for(let i=1;i<values.length;i++){
-      if(values[i] && values[i-1] && minutes[i] < minutes[i-1]){
-        showToast('Esse horário quebra a ordem das marcações do dia.');
+      const idx = historico.findIndex(function(item){ return item && item.data === dateValue; });
+      if(idx < 0){
+        setHistoryTimeEditStatus('Registro do dia não encontrado. Atualize o histórico e tente novamente.','error');
         return;
       }
+
+      const record = Object.assign({},historico[idx]);
+      if(record.folga){
+        setHistoryTimeEditStatus('Esse dia está marcado como folga e não possui horários para corrigir.','error');
+        return;
+      }
+
+      record[field] = value;
+      if(field === 'saidaAlmoco') record.saida = value;
+
+      const sequenceError = validateHistoryTimeSequence(record);
+      if(sequenceError){
+        setHistoryTimeEditStatus(sequenceError,'error');
+        return;
+      }
+
+      // Persiste primeiro no histórico.
+      historico[idx] = record;
+      localStorage.setItem('historicoAlmocoManual',JSON.stringify(historico));
+
+      // Depois sincroniza a cópia de marcações daquele dia, para a correção
+      // continuar salva mesmo após fechar/reabrir o aplicativo.
+      syncHistoryRecordClockings(dateValue,record);
+
+      // Confirma lendo de volta do armazenamento.
+      let saved = [];
+      try{ saved = JSON.parse(localStorage.getItem('historicoAlmocoManual') || '[]'); }catch(_){ saved = []; }
+      const confirmed = Array.isArray(saved) && saved.some(function(item){
+        if(!item || item.data !== dateValue) return false;
+        const stored = field === 'saidaAlmoco' ? (item.saidaAlmoco || item.saida) : item[field];
+        return stored === value;
+      });
+
+      if(!confirmed){
+        setHistoryTimeEditStatus('A correção não pôde ser confirmada no armazenamento. Tente novamente.','error');
+        return;
+      }
+
+      setHistoryTimeEditStatus('Horário corrigido e salvo.','ok');
+      mostrarHistorico();
+      atualizarEstatisticas();
+
+      const label = historyTimeFieldLabel(field);
+      setTimeout(function(){
+        closeHistoryTimeEditor();
+        showToast(label + ' corrigida para ' + value + '.');
+      },350);
+    }catch(error){
+      setHistoryTimeEditStatus('Não foi possível salvar a correção. Tente novamente.','error');
+    }finally{
+      if(btn){
+        btn.disabled = false;
+        btn.textContent = 'Salvar correção';
+      }
     }
-
-    historico[idx] = record;
-    localStorage.setItem('historicoAlmocoManual',JSON.stringify(historico));
-    syncHistoryRecordClockings(dateValue,record);
-
-    closeHistoryTimeEditor();
-    mostrarHistorico();
-    atualizarEstatisticas();
-    showToast(historyTimeFieldLabel(field) + ' corrigida para ' + value + '.');
   }
 
   function deleteHistoryDay(dateValue){

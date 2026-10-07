@@ -1,6 +1,6 @@
 {
-  "versionName": "1.0.9",
-  "versionCode": 10,
-  "apkUrl": "https://github.com/Luizfcalori/Ponto-do-almo-o-/releases/download/manual-v1.0.9/Hora-do-Almoco-Manual.apk",
-  "notes": "Histórico manual agora permite corrigir um horário específico e excluir somente um dia, mantendo os demais registros."
+  "versionName": "1.0.10",
+  "versionCode": 11,
+  "apkUrl": "https://github.com/Luizfcalori/Ponto-do-almo-o-/releases/download/manual-v1.0.10/Hora-do-Almoco-Manual.apk",
+  "notes": "Corrige o botão Salvar correção do histórico manual, confirma a persistência do horário e exibe mensagens de erro diretamente na janela de edição."
 }
