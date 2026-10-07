@@ -584,10 +584,16 @@
       text-align:center;font-size:8px;color:#7b8a9b
     }
     .manual-schedule-summary b{display:block;color:#0f172a;font-size:11px;margin-top:2px}
+    .manual-top-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:8px}
     .manual-schedule-btn{
-      width:100%;margin-top:8px;border:1px solid #dbe4ec;background:#fff;color:#0f172a;
-      border-radius:12px;padding:9px 10px;font-size:9.8px;font-weight:850
+      width:100%;margin-top:0;border:1px solid #dbe4ec;background:#fff;color:#0f172a;
+      border-radius:12px;padding:9px 8px;font-size:9px;font-weight:850
     }
+    .manual-dayoff-btn{
+      width:100%;border:1px solid #dbe4ec;background:#f8fafc;color:#475569;
+      border-radius:12px;padding:9px 8px;font-size:9px;font-weight:900
+    }
+    .manual-dayoff-btn.active{background:#eef2f6;color:#0f172a;border-color:#cbd5e1}
     .manual-marks-title{margin-top:11px;font-size:10px;font-weight:900;color:#334155}
     .manual-marks-grid{display:grid;gap:7px;margin-top:7px}
     .manual-mark-row{
@@ -739,7 +745,10 @@
           </div>
           <div class="manual-clock-badge" id="manualClockBadge">0/4</div>
         </div>
-        <button class="manual-schedule-btn" onclick="openManualScheduleModal()">Configurar jornada semanal</button>
+        <div class="manual-top-actions">
+          <button class="manual-schedule-btn" onclick="openManualScheduleModal()">Configurar jornada semanal</button>
+          <button class="manual-dayoff-btn" id="manualDayOffBtn" onclick="toggleManualDayOffToday()">Marcar folga hoje</button>
+        </div>
 
         <div class="manual-marks-title">Marcações de hoje</div>
         <div class="manual-marks-grid">
@@ -1265,6 +1274,20 @@
 
   function weekKeyForDate(value){
     return WEEK_DAY_KEYS[scheduleDate(value).getDay()];
+  }
+
+  function manualDateKey(value){
+    if(typeof value === 'string' && /^\d{2}\/\d{2}\/\d{4}$/.test(value)) return value;
+    const d = scheduleDate(value);
+    return pad(d.getDate()) + '/' + pad(d.getMonth()+1) + '/' + d.getFullYear();
+  }
+
+  function manualDayOffStorageKey(value){
+    return 'manualDayOff:' + manualDateKey(value);
+  }
+
+  function isManualDayOff(value){
+    return localStorage.getItem(manualDayOffStorageKey(value)) === '1';
   }
 
   function loadWeeklySchedule(){
@@ -2911,11 +2934,19 @@
     const hasWeeklyPlan = Object.keys(weekly).length > 0;
     const day = weekly[key];
 
+    if(isManualDayOff(dateValue)){
+      return {
+        key:key,label:WEEK_DAY_LABELS[key],
+        start:null,lunchOut:null,lunchReturn:null,end:null,
+        weekly:true,off:true,dailyOff:true,configured:true
+      };
+    }
+
     if(day && day.off){
       return {
         key:key,label:WEEK_DAY_LABELS[key],
         start:null,lunchOut:null,lunchReturn:null,end:null,
-        weekly:true,off:true,configured:true
+        weekly:true,off:true,dailyOff:false,configured:true
       };
     }
 
@@ -2926,7 +2957,7 @@
         lunchOut:day.lunchOut || null,
         lunchReturn:day.lunchReturn || null,
         end:day.end || null,
-        weekly:true,off:false,configured:true
+        weekly:true,off:false,dailyOff:false,configured:true
       };
     }
 
@@ -2934,7 +2965,7 @@
       return {
         key:key,label:WEEK_DAY_LABELS[key],
         start:null,lunchOut:null,lunchReturn:null,end:null,
-        weekly:true,off:false,configured:false
+        weekly:true,off:false,dailyOff:false,configured:false
       };
     }
 
@@ -2943,7 +2974,7 @@
       start:localStorage.getItem('manualScheduleStart') || null,
       lunchOut:null,lunchReturn:null,
       end:localStorage.getItem('manualScheduleEnd') || null,
-      weekly:false,off:false,configured:false
+      weekly:false,off:false,dailyOff:false,configured:false
     };
   }
 
@@ -2963,7 +2994,9 @@
         schedule.start + ' • almoço ' + schedule.lunchOut + '–' + schedule.lunchReturn + ' • saída ' + schedule.end;
     } else if(schedule.off){
       document.getElementById('mainActionTitle').textContent = 'Folga hoje • ' + schedule.label.toLowerCase();
-      document.getElementById('mainActionSub').textContent = 'Dia marcado como folga na sua jornada semanal';
+      document.getElementById('mainActionSub').textContent = schedule.dailyOff
+        ? 'Folga marcada somente para hoje'
+        : 'Dia marcado como folga na sua jornada semanal';
     } else {
       document.getElementById('mainActionTitle').textContent = 'Jornada de ' + schedule.label.toLowerCase() + ' não configurada';
       document.getElementById('mainActionSub').textContent = 'Defina os horários ou marque este dia como folga';
@@ -3094,10 +3127,22 @@
 
     if(!entry){
       setClockRingProgress(0);
-      document.getElementById('workState').textContent = 'AGUARDANDO ENTRADA';
-      document.getElementById('clockMeta').innerHTML =
-        (expectedWorkStart ? 'Entrada prevista ' + expectedWorkStart : 'Entrada ainda não definida') +
-        '<br>' + (expectedWorkEnd ? 'Saída prevista ' + expectedWorkEnd : 'Saída ainda não definida');
+
+      if(schedule.off){
+        document.getElementById('workState').textContent = 'FOLGA';
+        document.getElementById('currentTime').textContent = '—';
+        document.getElementById('clockSubtitle').textContent = 'Dia de descanso';
+        document.getElementById('clockMeta').innerHTML = schedule.dailyOff
+          ? 'Folga marcada somente para hoje'
+          : 'Folga prevista na jornada semanal';
+        document.getElementById('clockFooter').textContent = 'Sem marcações necessárias';
+        setGreetingMessage('Bom descanso!');
+      } else {
+        document.getElementById('workState').textContent = 'AGUARDANDO ENTRADA';
+        document.getElementById('clockMeta').innerHTML =
+          (expectedWorkStart ? 'Entrada prevista ' + expectedWorkStart : 'Entrada ainda não definida') +
+          '<br>' + (expectedWorkEnd ? 'Saída prevista ' + expectedWorkEnd : 'Saída ainda não definida');
+      }
     }
 
     if(entry && !lunchOut){
@@ -3288,12 +3333,65 @@
     }
   }
 
+  function removeTodayFromManualHistory(){
+    const today = manualToday();
+    try{
+      let history = JSON.parse(localStorage.getItem('historicoAlmocoManual') || '[]');
+      if(Array.isArray(history)){
+        history = history.filter(function(item){ return item && item.data !== today; });
+        if(history.length) localStorage.setItem('historicoAlmocoManual',JSON.stringify(history));
+        else localStorage.removeItem('historicoAlmocoManual');
+      }
+    }catch(_){
+      localStorage.removeItem('historicoAlmocoManual');
+    }
+  }
+
+  function toggleManualDayOffToday(){
+    const today = manualToday();
+    const currentlyOff = isManualDayOff(today);
+    const times = loadManualTimes();
+
+    if(!currentlyOff){
+      if(times.length && !confirm('Marcar hoje como folga apagará as marcações reais de hoje. Continuar?')){
+        return;
+      }
+
+      localStorage.setItem(manualDayOffStorageKey(today),'1');
+      localStorage.removeItem(manualStateKey());
+      localStorage.removeItem('almocoAtivoManual');
+      removeTodayFromManualHistory();
+
+      if(window.AndroidManual && typeof window.AndroidManual.cancelReturnAlarms === 'function'){
+        window.AndroidManual.cancelReturnAlarms();
+      }
+
+      applySeniorEvents([]);
+      updateManualClockUI();
+      mostrarHistorico();
+      atualizarEstatisticas();
+      showToast('Hoje foi marcado como folga.');
+      return;
+    }
+
+    localStorage.removeItem(manualDayOffStorageKey(today));
+    applySeniorEvents(manualEvents(loadManualTimes()));
+    updateManualClockUI();
+    showToast('Folga de hoje removida.');
+  }
+
   function updateManualClockUI(){
     const times = loadManualTimes();
     const schedule = getExpectedSchedule();
     const sub = document.getElementById('manualClockSub');
     const badge = document.getElementById('manualClockBadge');
     const actionButtons = document.querySelectorAll('.manual-mark-actions button');
+    const dayOffBtn = document.getElementById('manualDayOffBtn');
+
+    if(dayOffBtn){
+      dayOffBtn.classList.toggle('active',!!schedule.dailyOff);
+      dayOffBtn.textContent = schedule.dailyOff ? '✓ Folga hoje' : 'Marcar folga hoje';
+    }
 
     if(badge){
       badge.classList.toggle('off',!!schedule.off);
