@@ -1466,8 +1466,13 @@
     } else if(mode === 'done'){
       ring.classList.add('enhanced','mode-done');
       if(icon) icon.textContent = '✓';
+    } else if(mode === 'work'){
+      if(icon) icon.textContent = '💼';
+    } else if(mode === 'off'){
+      if(icon) icon.textContent = '🌿';
     } else {
-      if(icon) icon.textContent = '🍴';
+      // Aguardando entrada: relógio, nunca talheres.
+      if(icon) icon.textContent = '🕘';
     }
 
     if(subtitle) subtitle.textContent = '';
@@ -3550,6 +3555,7 @@
       setClockRingProgress(0);
 
       if(schedule.off){
+        setHomeClockMode('off');
         document.getElementById('workState').textContent = 'FOLGA';
         document.getElementById('currentTime').textContent = '—';
         document.getElementById('clockSubtitle').textContent = 'Dia de descanso';
@@ -3567,6 +3573,7 @@
     }
 
     if(entry && !lunchOut){
+      setHomeClockMode('work');
       setClockRingProgress(0);
       document.getElementById('workState').textContent = 'EM TRABALHO';
       document.getElementById('clockMeta').innerHTML =
@@ -3579,6 +3586,7 @@
       if(predictedReturn){
         renderLunchClock(lunchOut,predictedReturn);
       } else {
+        setHomeClockMode('lunch');
         setClockRingProgress(0);
         document.getElementById('workState').textContent = 'ALMOÇO INICIADO';
         document.getElementById('currentTime').textContent = lunchOut;
@@ -3591,6 +3599,7 @@
     }
 
     if(lunchReturn && !exit){
+      setHomeClockMode('work');
       setClockRingProgress(0);
       if(window.AndroidManual && typeof window.AndroidManual.cancelReturnAlarms === 'function'){
         window.AndroidManual.cancelReturnAlarms();
