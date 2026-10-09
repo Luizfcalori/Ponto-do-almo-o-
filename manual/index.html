@@ -1954,13 +1954,29 @@
   }
 
   function atualizarProgresso(){
-    const ativo = JSON.parse(localStorage.getItem('almocoAtivoManual') || 'null');
-    if(!ativo){
-      const ring = document.getElementById('homeClockRing');
+    // As quatro batidas manuais são a única fonte de verdade para a tela do dia.
+    // Não permita que um almoço guardado em cache volte a aparecer após exclusão.
+    const times = loadManualTimes();
+    const saidaReal = times[1] || null;
+    const retornoReal = times[2] || null;
+    const saidaFinal = times[3] || null;
+    const ring = document.getElementById('homeClockRing');
+    let ativo = null;
+    try { ativo = JSON.parse(localStorage.getItem('almocoAtivoManual') || 'null'); } catch(_){}
+
+    const stale = !saidaReal || !!retornoReal || !!saidaFinal;
+    const changed = !!(ativo && saidaReal && ativo.saida !== saidaReal);
+    if(stale || changed){
+      if(ativo || (ring && ring.classList.contains('mode-lunch'))){
+        clearManualLunchTracking();
+        applySeniorEvents(manualEvents(times));
+        updateManualClockUI();
+      }
       if(!(ring && ring.classList.contains('mode-done'))) setClockRingProgress(0);
       return;
     }
 
+    if(!ativo || !ativo.saida || !ativo.retorno) return;
     const now = new Date();
     const startParts = ativo.saida.split(':').map(Number);
     const endParts = ativo.retorno.split(':').map(Number);
@@ -2044,10 +2060,7 @@
     syncNotificationUI();
 
     if(!notifyEnabled){
-      if(returnNotificationTimer){
-        clearTimeout(returnNotificationTimer);
-        returnNotificationTimer = null;
-      }
+      cancelPendingReturnNotifications();
       if(window.AndroidManual && typeof window.AndroidManual.cancelReturnAlarms === 'function'){
         window.AndroidManual.cancelReturnAlarms();
       }
@@ -3001,6 +3014,11 @@
     // Ao abrir em um novo dia, nunca reaproveita batidas/intervalo do dia anterior.
     const hoje = new Date().toLocaleDateString('pt-BR');
     let ativo = JSON.parse(localStorage.getItem('almocoAtivoManual') || 'null');
+    const savedTimes = loadManualTimes();
+    if(ativo && (!savedTimes[1] || savedTimes[2] || savedTimes[3] || ativo.saida !== savedTimes[1])){
+      clearManualLunchTracking();
+      ativo = null;
+    }
     if(ativo && ativo.data){
       const dataAtivo = new Date(ativo.data);
       if(Number.isNaN(dataAtivo.getTime()) || dataAtivo.toLocaleDateString('pt-BR') !== hoje){
@@ -3128,6 +3146,7 @@
   let seniorConnected = false;
   let seniorPollTimer = null;
   let returnNotificationTimer = null;
+  let returnNotificationBeforeTimer = null;
 
   function openSeniorModal(){
     if(hasNativeSeniorBridge()){
@@ -3551,6 +3570,12 @@
     resetHomeClockVisual();
     updateScheduledWorkCard();
 
+    // Ao remover a saída para almoço (ou após retorno/fim do expediente),
+    // anule o estado anterior antes que o timer de 1 segundo o reative.
+    if(!lunchOut || lunchReturn || exit){
+      clearManualLunchTracking();
+    }
+
     if(!entry){
       setClockRingProgress(0);
 
@@ -3696,8 +3721,45 @@
     seniorPollTimer = null;
   }
 
+  function cancelPendingReturnNotifications(){
+    if(returnNotificationBeforeTimer !== null){
+      clearTimeout(returnNotificationBeforeTimer);
+      returnNotificationBeforeTimer = null;
+    }
+    if(returnNotificationTimer !== null){
+      clearTimeout(returnNotificationTimer);
+      returnNotificationTimer = null;
+    }
+  }
+
+  function clearManualLunchTracking(){
+    const wasActive = !!localStorage.getItem('almocoAtivoManual');
+    localStorage.removeItem('almocoAtivoManual');
+    ultimoRetornoHora = null;
+    ultimoRetornoMinuto = null;
+    cancelPendingReturnNotifications();
+
+    const progress = document.getElementById('progressCard');
+    if(progress) progress.style.display = 'none';
+    const exitInput = document.getElementById('exitTime');
+    if(exitInput) exitInput.value = '';
+    const outBig = document.getElementById('lunchOutBig');
+    if(outBig) outBig.textContent = '--:--';
+    const returnEl = document.getElementById('returnTime');
+    if(returnEl) returnEl.textContent = '--:--';
+    const title = document.getElementById('lunchHeroTitle');
+    if(title) title.textContent = 'Hora do Almoço';
+    const info = document.getElementById('lunchHeroText');
+    if(info) info.textContent = 'Registre sua saída real para iniciar o intervalo.';
+
+    if(wasActive && window.AndroidManual && typeof window.AndroidManual.cancelReturnAlarms === 'function'){
+      window.AndroidManual.cancelReturnAlarms();
+    }
+  }
+
   function scheduleReturnNotification(returnTime){
-    if(!notifyEnabled) return;
+    cancelPendingReturnNotifications();
+    if(!notifyEnabled || !returnTime) return;
 
     if(window.AndroidManual && typeof window.AndroidManual.scheduleReturnAlarms === 'function'){
       window.AndroidManual.scheduleReturnAlarms(returnTime);
@@ -3717,7 +3779,11 @@
     const delayExact = when - now;
 
     if(delayBefore > 0 && delayBefore <= 24*60*60*1000){
-      setTimeout(function(){
+      returnNotificationBeforeTimer = setTimeout(function(){
+        returnNotificationBeforeTimer = null;
+        // Ao excluir a saída, não emitir aviso de retorno antigo.
+        const times = loadManualTimes();
+        if(!times[1] || times[2]) return;
         try{
           new Notification('Hora do Almoço',{
             body:'Faltam 3 minutos para bater o ponto de retorno.'
@@ -3726,9 +3792,11 @@
       },delayBefore);
     }
 
-    if(returnNotificationTimer) clearTimeout(returnNotificationTimer);
     if(delayExact > 0 && delayExact <= 24*60*60*1000){
       returnNotificationTimer = setTimeout(function(){
+        returnNotificationTimer = null;
+        const times = loadManualTimes();
+        if(!times[1] || times[2]) return;
         try{
           new Notification('Hora do Almoço',{
             body:'Hora de bater o ponto de retorno do almoço.'
@@ -3965,6 +4033,7 @@
       return false;
     }
     saveManualTimes(compact);
+    if(!compact.length) removeTodayFromManualHistory();
     applySeniorEvents(manualEvents(compact));
     updateManualClockUI();
     const labels = ['Entrada','Saída para almoço','Retorno do almoço','Saída'];
