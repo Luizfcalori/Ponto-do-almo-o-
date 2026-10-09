@@ -229,6 +229,21 @@
     .summary-card.green .summary-value{color:#55e4b2}
     .summary-card.blue .summary-value{color:#7fc2ff}
     .summary-card.red .summary-value{color:#ff918a}
+    .summary-heading{display:flex;align-items:center;gap:7px;min-width:0}
+    .summary-heading .manual-clock-badge{padding:3px 7px}
+    .summary-card{appearance:none;position:relative;cursor:pointer;min-height:55px;transition:background .16s,border-color .16s;touch-action:manipulation}
+    .summary-card:hover,.summary-card:focus-visible{background:rgba(255,255,255,.12);border-color:rgba(190,208,223,.45)}
+    .summary-card:focus-visible{outline:2px solid #56dfb7;outline-offset:2px}
+    .summary-card .summary-label,.summary-card .summary-value{display:block}
+    .summary-card:after{content:"✎";position:absolute;right:4px;bottom:3px;font-size:9px;color:#9fb5c7;opacity:.7}
+    .summary-edit-hint{font-size:9px;color:#9fb5c7;text-align:center;margin-top:7px}
+    .manual-quick-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:10px}
+    .manual-quick-actions button{min-height:39px}
+    .manual-quick-actions .manual-schedule-btn{background:rgba(255,255,255,.98)}
+    .manual-mark-modal-note{font-size:10px;color:#64748b;line-height:1.45;margin-top:11px}
+    .manual-mark-modal-buttons{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+    .manual-mark-modal-buttons .btn{margin-top:9px}
+    .manual-mark-modal-buttons .btn:disabled{opacity:.4;cursor:not-allowed}
 
     @media (max-height:740px){
       .home-hero{padding-top:calc(14px + env(safe-area-inset-top));padding-bottom:12px}
@@ -736,27 +751,31 @@
 
       <div class="home-content">
         <div class="section-head">
-          <h2>Marcações de hoje</h2>
+          <div class="summary-heading">
+            <h2>Marcações de hoje</h2>
+            <span class="manual-clock-badge" id="manualClockBadge">0/4</span>
+          </div>
           <button class="section-link" onclick="goView('history')">Histórico ›</button>
         </div>
         <div class="summary-grid">
-          <div class="summary-card green">
-            <div class="summary-label">Entrada</div>
-            <div class="summary-value" id="sumEntry">--:--</div>
-          </div>
-          <div class="summary-card orange">
-            <div class="summary-label">Saída almoço</div>
-            <div class="summary-value" id="sumLunchOut">--:--</div>
-          </div>
-          <div class="summary-card blue">
-            <div class="summary-label">Retorno</div>
-            <div class="summary-value" id="sumReturn">--:--</div>
-          </div>
-          <div class="summary-card red">
-            <div class="summary-label">Saída</div>
-            <div class="summary-value" id="sumExit">--:--</div>
-          </div>
+          <button type="button" class="summary-card green" onclick="openManualMarkModal(0)" aria-label="Registrar ou editar entrada">
+            <span class="summary-label">Entrada</span>
+            <span class="summary-value" id="sumEntry">--:--</span>
+          </button>
+          <button type="button" class="summary-card orange" onclick="openManualMarkModal(1)" aria-label="Registrar ou editar saída para almoço">
+            <span class="summary-label">Saída almoço</span>
+            <span class="summary-value" id="sumLunchOut">--:--</span>
+          </button>
+          <button type="button" class="summary-card blue" onclick="openManualMarkModal(2)" aria-label="Registrar ou editar retorno do almoço">
+            <span class="summary-label">Retorno</span>
+            <span class="summary-value" id="sumReturn">--:--</span>
+          </button>
+          <button type="button" class="summary-card red" onclick="openManualMarkModal(3)" aria-label="Registrar ou editar saída">
+            <span class="summary-label">Saída</span>
+            <span class="summary-value" id="sumExit">--:--</span>
+          </button>
         </div>
+        <div class="summary-edit-hint">Toque em um horário para registrar ou corrigir</div>
       </div>
 
       <button class="main-action" onclick="goView('home')">
@@ -767,72 +786,9 @@
         <div class="arrow">›</div>
       </button>
 
-      <div class="manual-clock-card">
-        <div class="manual-clock-head">
-          <div>
-            <div class="manual-clock-title">Apontamento manual</div>
-            <div class="manual-clock-sub" id="manualClockSub">Registre sua jornada diretamente pelo aplicativo.</div>
-          </div>
-          <div class="manual-clock-badge" id="manualClockBadge">0/4</div>
-        </div>
-        <div class="manual-top-actions">
-          <button class="manual-schedule-btn" onclick="openManualScheduleModal()">Configurar jornada semanal</button>
-          <button class="manual-dayoff-btn" id="manualDayOffBtn" onclick="toggleManualDayOffToday()">Marcar folga hoje</button>
-        </div>
-
-        <div class="manual-marks-title">Marcações de hoje</div>
-        <div class="manual-marks-grid">
-          <div class="manual-mark-row">
-            <div class="manual-mark-info">
-              <span class="manual-mark-dot entry"></span>
-              <div><b>Entrada</b><small>Horário real de entrada</small></div>
-            </div>
-            <div class="manual-mark-actions">
-              <input type="time" id="manualMark0" onchange="setManualMark(0,this.value)">
-              <button onclick="setManualMarkNow(0)">Agora</button>
-            </div>
-          </div>
-
-          <div class="manual-mark-row">
-            <div class="manual-mark-info">
-              <span class="manual-mark-dot lunch"></span>
-              <div><b>Saída para almoço</b><small>Quando você realmente sair</small></div>
-            </div>
-            <div class="manual-mark-actions">
-              <input type="time" id="manualMark1" onchange="setManualMark(1,this.value)">
-              <button onclick="setManualMarkNow(1)">Agora</button>
-            </div>
-          </div>
-
-          <div class="manual-mark-row">
-            <div class="manual-mark-info">
-              <span class="manual-mark-dot return"></span>
-              <div>
-                <b>Retorno do almoço</b>
-                <small id="manualReturnSuggestion">Sugestão: --:-- • você confirma o horário real</small>
-              </div>
-            </div>
-            <div class="manual-mark-actions">
-              <input type="time" id="manualMark2" onchange="setManualMark(2,this.value)">
-              <button onclick="setManualMarkNow(2)">Agora</button>
-            </div>
-          </div>
-
-          <div class="manual-mark-row">
-            <div class="manual-mark-info">
-              <span class="manual-mark-dot exit"></span>
-              <div><b>Saída</b><small>Horário real de encerramento</small></div>
-            </div>
-            <div class="manual-mark-actions">
-              <input type="time" id="manualMark3" onchange="setManualMark(3,this.value)">
-              <button onclick="setManualMarkNow(3)">Agora</button>
-            </div>
-          </div>
-        </div>
-
-        <div class="manual-mark-note">
-          O retorno sugerido é apenas uma referência. Ele só vira marcação quando você informar ou tocar em “Agora”.
-        </div>
+      <div class="manual-quick-actions">
+        <button type="button" class="manual-schedule-btn" onclick="openManualScheduleModal()">Configurar jornada semanal</button>
+        <button type="button" class="manual-dayoff-btn" id="manualDayOffBtn" onclick="toggleManualDayOffToday()">Marcar folga hoje</button>
       </div>
     </div>
   </section>
@@ -1108,6 +1064,28 @@
     </div>
   </section>
 
+
+  <div id="manualMarkEditModal" class="modal-backdrop" onclick="closeManualMarkModal(event)">
+    <div class="modal-card" onclick="event.stopPropagation()">
+      <div class="modal-head">
+        <div>
+          <div class="modal-title" id="manualMarkEditTitle">Registrar horário</div>
+          <div class="modal-sub">Marcação real de hoje • escolha o horário ou toque em “Agora”.</div>
+        </div>
+        <button type="button" class="modal-close" onclick="closeManualMarkModal()" aria-label="Fechar">✕</button>
+      </div>
+      <div class="field" style="margin-top:16px">
+        <label for="manualMarkEditInput">Horário</label>
+        <input id="manualMarkEditInput" type="time" step="60">
+      </div>
+      <div class="manual-mark-modal-buttons">
+        <button type="button" class="btn btn-outline" onclick="setManualMarkModalNow()">Agora</button>
+        <button type="button" class="btn btn-danger" id="manualMarkEditClear" onclick="clearManualMarkModal()">Apagar horário</button>
+      </div>
+      <button type="button" class="btn btn-orange" onclick="saveManualMarkModal()">Salvar horário</button>
+      <div class="manual-mark-modal-note">O horário previsto não é registrado automaticamente. Somente a marcação confirmada será salva.</div>
+    </div>
+  </div>
 
   <div id="manualScheduleModal" class="modal-backdrop" onclick="closeManualScheduleModal(event)">
     <div class="modal-card" onclick="event.stopPropagation()">
@@ -3786,46 +3764,22 @@
   function updateManualClockUI(){
     const times = loadManualTimes();
     const schedule = getExpectedSchedule();
-    const sub = document.getElementById('manualClockSub');
     const badge = document.getElementById('manualClockBadge');
-    const actionButtons = document.querySelectorAll('.manual-mark-actions button');
     const dayOffBtn = document.getElementById('manualDayOffBtn');
-
     if(dayOffBtn){
       dayOffBtn.classList.toggle('active',!!schedule.dailyOff);
       dayOffBtn.textContent = schedule.dailyOff ? '✓ Folga hoje' : 'Marcar folga hoje';
     }
-
     if(badge){
       badge.classList.toggle('off',!!schedule.off);
       badge.textContent = schedule.off ? 'FOLGA' : (times.length + '/4');
     }
-
-    for(let i=0;i<4;i++){
-      const input = document.getElementById('manualMark'+i);
-      if(input){
-        input.value = times[i] || '';
-        input.disabled = !!schedule.off || schedule.configured === false;
-      }
-    }
-
-    actionButtons.forEach(function(btn){
-      btn.disabled = !!schedule.off || schedule.configured === false;
-      btn.style.opacity = btn.disabled ? '.45' : '1';
+    const labels = ['Entrada','Saída para almoço','Retorno do almoço','Saída'];
+    document.querySelectorAll('.summary-card').forEach(function(btn,index){
+      btn.setAttribute('aria-label',labels[index] + ': ' + (times[index] || 'não registrada') + '. Toque para ' + (times[index] ? 'editar.' : 'registrar.'));
+      btn.title = 'Toque para ' + (times[index] ? 'corrigir' : 'registrar') + ' ' + labels[index].toLowerCase();
+      btn.classList.toggle('is-off',!!schedule.off);
     });
-
-    if(sub){
-      if(schedule.off){
-        sub.textContent = 'Hoje está marcado como folga. Não há marcações para preencher.';
-      } else if(schedule.configured === false){
-        sub.textContent = 'Configure a jornada de hoje ou marque o dia como folga.';
-      } else if(times.length >= 4){
-        sub.textContent = 'Jornada de hoje concluída. Estes são os horários reais registrados.';
-      } else {
-        sub.textContent = 'Os campos abaixo são horários reais. Preencha ou toque em “Agora” no momento de cada marcação.';
-      }
-    }
-
     updateManualReturnSuggestion();
   }
 
@@ -3839,55 +3793,107 @@
     return true;
   }
 
-  function setManualMark(index,value){
-    if(index < 0 || index > 3) return;
+  let activeManualMarkIndex = null;
+  const MANUAL_MARK_LABELS = ['Entrada','Saída para almoço','Retorno do almoço','Saída'];
 
+  function openManualMarkModal(index){
+    if(!Number.isInteger(index) || index < 0 || index > 3) return;
+    const schedule = getExpectedSchedule();
+    if(schedule.off){
+      showToast('Hoje está marcado como folga. Ajuste sua jornada para registrar horários.');
+      return;
+    }
+    if(schedule.configured === false || !schedule.start || !schedule.lunchOut || !schedule.lunchReturn || !schedule.end){
+      openManualScheduleModal();
+      showToast('Configure a jornada de hoje antes de registrar.');
+      return;
+    }
+    activeManualMarkIndex = index;
+    const times = loadManualTimes();
+    const modal = document.getElementById('manualMarkEditModal');
+    const input = document.getElementById('manualMarkEditInput');
+    const title = document.getElementById('manualMarkEditTitle');
+    const clearBtn = document.getElementById('manualMarkEditClear');
+    if(title) title.textContent = (times[index] ? 'Editar ' : 'Registrar ') + MANUAL_MARK_LABELS[index].toLowerCase();
+    if(input) input.value = times[index] || '';
+    if(clearBtn) clearBtn.disabled = !times[index];
+    if(modal) modal.classList.add('show');
+  }
+  function closeManualMarkModal(event){
+    if(event && event.target !== event.currentTarget) return;
+    const modal = document.getElementById('manualMarkEditModal');
+    if(modal) modal.classList.remove('show');
+    activeManualMarkIndex = null;
+  }
+  function setManualMarkModalNow(){
+    const input = document.getElementById('manualMarkEditInput');
+    const now = new Date();
+    if(input) input.value = pad(now.getHours()) + ':' + pad(now.getMinutes());
+  }
+  function refreshManualMarkAfterSave(){
+    mostrarHistorico();
+    atualizarEstatisticas();
+    closeManualMarkModal();
+  }
+  function saveManualMarkModal(){
+    if(activeManualMarkIndex === null) return;
+    const input = document.getElementById('manualMarkEditInput');
+    const value = input && input.value;
+    if(!value){showToast('Escolha um horário ou toque em “Agora”.');return;}
+    if(setManualMark(activeManualMarkIndex,value)) refreshManualMarkAfterSave();
+  }
+  function clearManualMarkModal(){
+    if(activeManualMarkIndex === null) return;
+    const times = loadManualTimes();
+    const index = activeManualMarkIndex;
+    if(!times[index]) return;
+    if(times.slice(index+1).some(Boolean) &&
+       !confirm('Apagar esta marcação também apagará as marcações posteriores de hoje. Deseja continuar?')) return;
+    if(setManualMark(index,'')) refreshManualMarkAfterSave();
+  }
+
+  function setManualMark(index,value){
+    if(index < 0 || index > 3) return false;
     const todaySchedule = getExpectedSchedule();
     if(todaySchedule.off){
       showToast('Hoje está marcado como folga.');
-      return;
+      return false;
     }
     if(todaySchedule.configured === false || !todaySchedule.start || !todaySchedule.lunchOut || !todaySchedule.lunchReturn || !todaySchedule.end){
       openManualScheduleModal();
       showToast('Configure os 4 horários previstos de hoje ou marque como folga.');
-      return;
+      return false;
     }
     if(value && !/^([01]\d|2[0-3]):[0-5]\d$/.test(value)){
       showToast('Use um horário válido.');
       updateManualClockUI();
-      return;
+      return false;
     }
-
     const times = loadManualTimes();
     while(times.length < 4) times.push(null);
     times[index] = value || null;
-
-    // Não permite preencher uma etapa pulando a anterior.
     for(let i=0;i<index;i++){
       if(!times[i]){
         showToast('Preencha primeiro a marcação anterior.');
         updateManualClockUI();
-        return;
+        return false;
       }
     }
-
     const compact = times.filter(function(v,i){
       if(i === 0) return !!v;
       return !!v && times.slice(0,i).every(Boolean);
     });
-
     if(!validateManualSequence(compact)){
       showToast('Confira a ordem dos horários.');
       updateManualClockUI();
-      return;
+      return false;
     }
-
     saveManualTimes(compact);
     applySeniorEvents(manualEvents(compact));
     updateManualClockUI();
-
     const labels = ['Entrada','Saída para almoço','Retorno do almoço','Saída'];
     showToast(labels[index] + (value ? ' registrada às ' + value + '.' : ' removida.'));
+    return true;
   }
 
   function setManualMarkNow(index){
